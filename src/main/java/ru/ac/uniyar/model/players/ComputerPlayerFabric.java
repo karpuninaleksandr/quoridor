@@ -14,7 +14,7 @@ import java.util.Map;
 
 @Service
 public class ComputerPlayerFabric {
-    private Map<ComputerAlgorithmType, Map<ComputerPlayerHardnessLevel, ComputerPlayer>> players;
+    private final Map<ComputerAlgorithmType, Map<ComputerPlayerHardnessLevel, ComputerPlayer>> players = new HashMap<>();
 
     public ComputerPlayer getComputerPlayer(String typeOfPlayer, String hardnessLevel) {
         return players.get(ComputerAlgorithmType.findByDescription(typeOfPlayer)).get(ComputerPlayerHardnessLevel.findByDescription(hardnessLevel));
@@ -23,7 +23,7 @@ public class ComputerPlayerFabric {
     @PostConstruct()
     private void createPlayers() {
         for (ComputerAlgorithmType computerAlgorithmType : ComputerAlgorithmType.values()) {
-            players.put(computerAlgorithmType, new HashMap<ComputerPlayerHardnessLevel, ComputerPlayer>());
+            players.put(computerAlgorithmType, new HashMap<>());
             for (ComputerPlayerHardnessLevel computerPlayerHardnessLevel : ComputerPlayerHardnessLevel.values()) {
                 ComputerPlayer computerPlayer = new ComputerPlayer();
                 computerPlayer.setAlgorithm(switch (computerAlgorithmType) {

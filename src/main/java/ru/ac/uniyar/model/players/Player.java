@@ -2,12 +2,14 @@ package ru.ac.uniyar.model.players;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
 
 //базовый класс Player с описанием возможных действий игрока
 @AllArgsConstructor
 @NoArgsConstructor
+@Setter
 public abstract class Player {
     private int amountOfWallsLeft;
 

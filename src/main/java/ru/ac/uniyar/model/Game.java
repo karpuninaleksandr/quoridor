@@ -7,7 +7,7 @@ import lombok.Setter;
 import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.players.Player;
 
-import java.time.Duration;
+import java.time.Instant;
 
 //класс, описывающий конфигурацию игры
 @Getter
@@ -19,6 +19,6 @@ public class Game {
     private Board board;
     private Player player1;
     private Player player2;
-    private Duration gameTime;
+    private Instant gameTimeStart;
     private int amountOfMoves;
 }
