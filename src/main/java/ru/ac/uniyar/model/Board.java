@@ -13,4 +13,6 @@ import java.util.Map;
 @NoArgsConstructor
 public class Board {
     private Map<String, BoardTile> tiles = new HashMap<>();
+    private String positionOfPlayer1;
+    private String positionOfPlayer2;
 }

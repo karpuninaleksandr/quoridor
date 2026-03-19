@@ -32,6 +32,9 @@ public class GameProcessor {
             }
         }
 
+        board.setPositionOfPlayer1("0".concat(String.valueOf((gameSize.getAmountOfTilesPerSide() - 1) / 2)));
+        board.setPositionOfPlayer2(String.valueOf(gameSize.getAmountOfTilesPerSide() - 1).concat(String.valueOf((gameSize.getAmountOfTilesPerSide() - 1) / 2)));
+
         return board;
     }
 
@@ -50,13 +53,26 @@ public class GameProcessor {
                 player1,
                 player2,
                 Instant.now(),
-                0
+                0,
+                false
         );
 
         initGame();
     }
 
     private void initGame() {
+        int currentPlayer = Math.random() > 0.5 ? 2 : 1;
 
+        while (!game.isFinished()) {
+            if ((currentPlayer == 1)) {
+                game.applyMove(game.getPlayer1().getMove(game.getBoard()));
+                currentPlayer = 2;
+            } else {
+                game.applyMove(game.getPlayer2().getMove(game.getBoard()));
+                currentPlayer = 1;
+            }
+            //todo обновить отображение
+        }
+        //todo отобразить статистику игры
     }
 }

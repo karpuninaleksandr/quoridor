@@ -21,4 +21,9 @@ public class Game {
     private Player player2;
     private Instant gameTimeStart;
     private int amountOfMoves;
+    private boolean finished;
+
+    public void applyMove(Move move) {
+        //todo добавить применение метода
+    }
 }
