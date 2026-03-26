@@ -26,7 +26,7 @@ public class GameProcessor {
                 board.getTiles().put(i + "" + j, new BoardTile(
                         j != 0,
                         i != 0,
-                        j != gameSize.getAmountOfWalls() - 1,
+                        j != gameSize.getAmountOfTilesPerSide() - 1,
                         i != gameSize.getAmountOfTilesPerSide() - 1
                 ));
             }
@@ -41,9 +41,11 @@ public class GameProcessor {
     public void startNewGame(String sizeDescription, String typeOfPlayer1, String typeOfPlayer2, String gameHardness) {
         GameSize gameSize = GameSize.findByDescription(sizeDescription);
         Player player1 = typeOfPlayer1.equals("Игрок") ? new HumanPlayer() : computerPlayerFabric.getComputerPlayer(typeOfPlayer1, gameHardness);
+        player1.setPlayerId(1);
         player1.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
         Player player2 = computerPlayerFabric.getComputerPlayer(typeOfPlayer2, gameHardness);
         player2.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
+        player1.setPlayerId(2);
 
         Board board = initBoard(gameSize);
 

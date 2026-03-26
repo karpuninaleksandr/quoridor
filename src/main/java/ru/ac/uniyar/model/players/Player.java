@@ -1,6 +1,7 @@
 package ru.ac.uniyar.model.players;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import ru.ac.uniyar.model.Board;
@@ -10,7 +11,9 @@ import ru.ac.uniyar.model.Move;
 @AllArgsConstructor
 @NoArgsConstructor
 @Setter
+@Getter
 public abstract class Player {
+    private int playerId;
     private int amountOfWallsLeft;
 
     public boolean canPlaceWall() {

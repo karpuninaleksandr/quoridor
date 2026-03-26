@@ -24,6 +24,24 @@ public class Game {
     private boolean finished;
 
     public void applyMove(Move move) {
-        //todo добавить применение метода
+        switch (move.getMoveType()) {
+            case PLACE_WALL -> {
+                board.placeWall(move.getStartPosition(), move.getEndPosition());
+                if (move.getPlayerId() == 1) {
+                    player1.setAmountOfWallsLeft(player1.getAmountOfWallsLeft() - 1);
+                } else {
+                    player2.setAmountOfWallsLeft(player2.getAmountOfWallsLeft() - 1);
+                }
+            }
+            case MOVE_PLAYER -> {
+                if (move.getPlayerId() == 1) {
+                    board.setPositionOfPlayer1(move.getEndPosition());
+                } else {
+                    board.setPositionOfPlayer2(move.getEndPosition());
+                }
+            }
+        }
+        ++amountOfMoves;
+        //todo check if game is finished
     }
 }
