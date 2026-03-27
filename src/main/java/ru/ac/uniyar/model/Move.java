@@ -16,4 +16,22 @@ public class Move {
     private int playerId;
     private String startPosition;
     private String endPosition;
+
+    public static Move movePlayer(int playerId, String endPosition) {
+        return new Move(
+                MoveType.MOVE_PLAYER,
+                playerId,
+                null,
+                endPosition
+        );
+    }
+
+    public static Move placeWall(int playerId, String startPosition, String endPosition) {
+        return new Move(
+                MoveType.PLACE_WALL,
+                playerId,
+                startPosition,
+                endPosition
+        );
+    }
 }

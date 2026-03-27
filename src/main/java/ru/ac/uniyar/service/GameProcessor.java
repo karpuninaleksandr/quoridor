@@ -3,9 +3,11 @@ package ru.ac.uniyar.service;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.annotation.SessionScope;
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.BoardTile;
 import ru.ac.uniyar.model.Game;
+import ru.ac.uniyar.model.Move;
 import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.players.ComputerPlayerFabric;
 import ru.ac.uniyar.model.players.HumanPlayer;
@@ -15,6 +17,7 @@ import java.time.Instant;
 
 @Service
 @Getter
+@SessionScope
 public class GameProcessor {
     @Autowired
     private ComputerPlayerFabric computerPlayerFabric;
@@ -69,15 +72,33 @@ public class GameProcessor {
         game.setCurrentPlayer(Math.random() > 0.5 ? 1 : 2);
     }
 
-    public void makeMove() {
-        if (game.isFinished()) {
-            return;
-        }
+    public void makeHumanMove(Move move) {
+        if (game.isFinished()) return;
 
-        Player current = game.getCurrentPlayer() == 1 ? game.getPlayer1() : game.getPlayer2();
+        game.applyMove(move);
+        switchTurn();
 
-        game.applyMove(current.getMove(game.getBoard()));
+        triggerAI();
+    }
 
+    public void triggerAI() {
+        Player current = getCurrentPlayer();
+
+        if (current instanceof HumanPlayer) return;
+
+        Move move = current.getMove(game.getBoard());
+        game.applyMove(move);
+
+        switchTurn();
+    }
+
+    private Player getCurrentPlayer() {
+        return game.getCurrentPlayer() == 1
+                ? game.getPlayer1()
+                : game.getPlayer2();
+    }
+
+    private void switchTurn() {
         game.setCurrentPlayer(game.getCurrentPlayer() == 1 ? 2 : 1);
     }
 }

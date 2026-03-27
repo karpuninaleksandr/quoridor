@@ -7,6 +7,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Game;
+import ru.ac.uniyar.model.Move;
 import ru.ac.uniyar.service.GameProcessor;
 
 @Route("/game")
@@ -24,7 +25,7 @@ public class GamePageController extends VerticalLayout {
 
         Button nextMove = new Button("Следующий ход");
         nextMove.addClickListener(e -> {
-            gameProcessor.makeMove();
+//            gameProcessor.makeHumanMove(m);
             renderBoard();
         });
 
@@ -37,20 +38,24 @@ public class GamePageController extends VerticalLayout {
         boardGrid.removeAll();
 
         Game game = gameProcessor.getGame();
+        if (game == null) {
+            add(new H1("Ошибка: игра не создана"));
+            return;
+        }
         Board board = game.getBoard();
         int size = game.getGameSize().getAmountOfTilesPerSide();
 
         boardGrid.getStyle()
                 .set("display", "grid")
-                .set("grid-template-columns", "repeat(" + size + ", 40px)");
+                .set("grid-template-columns", "repeat(" + size + ", 50px)");
 
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 String pos = i + "" + j;
 
                 Div cell = new Div();
-                cell.setWidth("40px");
-                cell.setHeight("40px");
+                cell.setWidth("50px");
+                cell.setHeight("50px");
 
                 cell.getStyle()
                         .set("border", "1px solid black")
@@ -67,6 +72,16 @@ public class GamePageController extends VerticalLayout {
                     cell.setText("P2");
                     cell.getStyle().set("background", "lightcoral");
                 }
+
+                cell.addClickListener(e -> {
+                    Move move = Move.movePlayer(
+                            game.getCurrentPlayer(),
+                            pos
+                    );
+
+                    gameProcessor.makeHumanMove(move);
+                    renderBoard();
+                });
 
                 boardGrid.add(cell);
             }

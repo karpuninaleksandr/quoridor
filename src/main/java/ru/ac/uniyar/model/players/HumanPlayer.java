@@ -7,7 +7,7 @@ import ru.ac.uniyar.model.Move;
 public class HumanPlayer extends Player {
     @Override
     public Move getMove(Board board) {
-        //запрос хода от пользователя
+        //запрос хода от пользователя происходит с UI
         return null;
     }
 }
