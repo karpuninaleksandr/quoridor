@@ -1,5 +1,6 @@
 package ru.ac.uniyar.service;
 
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.ac.uniyar.model.Board;
@@ -13,6 +14,7 @@ import ru.ac.uniyar.model.players.Player;
 import java.time.Instant;
 
 @Service
+@Getter
 public class GameProcessor {
     @Autowired
     private ComputerPlayerFabric computerPlayerFabric;
@@ -45,7 +47,7 @@ public class GameProcessor {
         player1.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
         Player player2 = computerPlayerFabric.getComputerPlayer(typeOfPlayer2, gameHardness);
         player2.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
-        player1.setPlayerId(2);
+        player2.setPlayerId(2);
 
         Board board = initBoard(gameSize);
 
@@ -54,6 +56,7 @@ public class GameProcessor {
                 board,
                 player1,
                 player2,
+                1,
                 Instant.now(),
                 0,
                 false
@@ -63,18 +66,18 @@ public class GameProcessor {
     }
 
     private void initGame() {
-        int currentPlayer = Math.random() > 0.5 ? 2 : 1;
+        game.setCurrentPlayer(Math.random() > 0.5 ? 1 : 2);
+    }
 
-        while (!game.isFinished()) {
-            if ((currentPlayer == 1)) {
-                game.applyMove(game.getPlayer1().getMove(game.getBoard()));
-                currentPlayer = 2;
-            } else {
-                game.applyMove(game.getPlayer2().getMove(game.getBoard()));
-                currentPlayer = 1;
-            }
-            //todo обновить отображение
+    public void makeMove() {
+        if (game.isFinished()) {
+            return;
         }
-        //todo отобразить статистику игры
+
+        Player current = game.getCurrentPlayer() == 1 ? game.getPlayer1() : game.getPlayer2();
+
+        game.applyMove(current.getMove(game.getBoard()));
+
+        game.setCurrentPlayer(game.getCurrentPlayer() == 1 ? 2 : 1);
     }
 }

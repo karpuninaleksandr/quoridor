@@ -53,10 +53,6 @@ public class Board {
 
             bottomLeft.setRightMovementAvailable(false);
             bottomRight.setLeftMovementAvailable(false);
-
-            return;
         }
-
-        throw new IllegalArgumentException("Некорректная стена: " + startPosition + " -> " + endPosition);
     }
 }

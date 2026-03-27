@@ -48,8 +48,9 @@ public class StartPageController extends VerticalLayout {
             }
 
             gameProcessor.startNewGame(size, player1.getValue(), player2.getValue(), hardness.getValue());
+            getUI().ifPresent(ui -> ui.navigate("/game"));
         });
 
-        add(title, sizeSelector, startButton);
+        add(title, sizeSelector, player1, player2, hardness, startButton);
     }
 }

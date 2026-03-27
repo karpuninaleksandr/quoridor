@@ -19,6 +19,7 @@ public class Game {
     private Board board;
     private Player player1;
     private Player player2;
+    private int currentPlayer;
     private Instant gameTimeStart;
     private int amountOfMoves;
     private boolean finished;
@@ -42,6 +43,15 @@ public class Game {
             }
         }
         ++amountOfMoves;
-        //todo check if game is finished
+        checkIfFinished();
+    }
+
+    private void checkIfFinished() {
+        int player1Row = board.getPositionOfPlayer1().charAt(0) - '0';
+        int player2Row = board.getPositionOfPlayer2().charAt(0) - '0';
+
+        if (player1Row == gameSize.getAmountOfTilesPerSide() - 1 || player2Row == 0) {
+            finished = true;
+        }
     }
 }
