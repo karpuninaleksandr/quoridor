@@ -8,5 +8,5 @@ import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
 //интерфейс для взаимодействия с любым из алгоритмов для ComputerPlayer
 public interface Algorithm {
     ComputerAlgorithmType getType();
-    Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel);
+    Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId);
 }

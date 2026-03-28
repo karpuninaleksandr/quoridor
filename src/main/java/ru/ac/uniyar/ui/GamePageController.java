@@ -237,7 +237,7 @@ public class GamePageController extends VerticalLayout {
 
         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
 
-            Move move = gameProcessor.getCurrentPlayer().getMove(game.getBoard());
+            Move move = gameProcessor.getCurrentPlayer().getMove(game.getBoard(), game.getCurrentPlayer());
 
             if (move != null) gameProcessor.makeMove(move);
 

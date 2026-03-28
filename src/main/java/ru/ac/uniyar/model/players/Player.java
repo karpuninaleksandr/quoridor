@@ -20,5 +20,5 @@ public abstract class Player {
         return amountOfWallsLeft > 0;
     }
 
-    public abstract Move getMove(Board board);
+    public abstract Move getMove(Board board, int playerId);
 }

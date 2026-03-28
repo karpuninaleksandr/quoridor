@@ -12,7 +12,7 @@ public class MonteCarloAlgorithm implements Algorithm {
     }
 
     @Override
-    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel) {
+    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId) {
         return null;
     }
 }

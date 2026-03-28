@@ -14,7 +14,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
     }
 
     @Override
-    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel) {
+    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId) {
 
         int depth = switch (hardnessLevel) {
             case EASY -> 1;
@@ -22,8 +22,6 @@ public class AlphaBetaAlgorithm implements Algorithm {
             case HARD -> 3;
         };
 
-        //todo fix playerId init
-        int playerId = 2;
         int size = (int) Math.sqrt(board.getTiles().size());
 
         List<Move> moves = getMoves(board, playerId);
