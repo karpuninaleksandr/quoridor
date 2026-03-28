@@ -4,17 +4,22 @@ import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
+import ru.ac.uniyar.model.enums.MoveType;
 
 import java.util.*;
 
 public class AlphaBetaAlgorithm implements Algorithm {
+
     @Override
     public ComputerAlgorithmType getType() {
         return ComputerAlgorithmType.ALPHABETA;
     }
 
     @Override
-    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId) {
+    public Move getMove(Board board,
+                        ComputerPlayerHardnessLevel hardnessLevel,
+                        int playerId,
+                        int amountOfWallsLeft) {
 
         int depth = switch (hardnessLevel) {
             case EASY -> 1;
@@ -24,16 +29,30 @@ public class AlphaBetaAlgorithm implements Algorithm {
 
         int size = (int) Math.sqrt(board.getTiles().size());
 
-        List<Move> moves = getMoves(board, playerId);
+        List<Move> moves = getMoves(board, playerId, amountOfWallsLeft);
 
         Move bestMove = null;
         int bestValue = Integer.MIN_VALUE;
 
         for (Move move : moves) {
+
             Board copy = board.copy();
             applyMove(copy, move);
 
-            int eval = alphaBeta(copy, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false, playerId, size);
+            int nextWalls = amountOfWallsLeft;
+            if (move.getMoveType() == MoveType.PLACE_WALL) {
+                nextWalls--;
+            }
+
+            int eval = alphaBeta(copy,
+                    depth - 1,
+                    Integer.MIN_VALUE,
+                    Integer.MAX_VALUE,
+                    false,
+                    playerId,
+                    size,
+                    amountOfWallsLeft,
+                    nextWalls);
 
             if (eval > bestValue) {
                 bestValue = eval;
@@ -44,29 +63,51 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return bestMove;
     }
 
-    private void applyMove(Board board, Move move) {
-        if (move.getPlayerId() == 1) {
-            board.setPositionOfPlayer1(move.getEndPosition());
-        } else {
-            board.setPositionOfPlayer2(move.getEndPosition());
-        }
-    }
+    private int alphaBeta(Board board,
+                          int depth,
+                          int alpha,
+                          int beta,
+                          boolean maximizing,
+                          int playerId,
+                          int size,
+                          int wallsLeft1,
+                          int wallsLeft2) {
 
-    private int alphaBeta(Board board, int depth, int alpha, int beta, boolean maximizing, int playerId, int size) {
         if (depth == 0) {
             return evaluate(board, playerId, size);
         }
 
-        List<Move> moves = getMoves(board, maximizing ? playerId : (3 - playerId));
+        int currentPlayer = maximizing ? playerId : (3 - playerId);
+        int currentWalls = currentPlayer == 1 ? wallsLeft1 : wallsLeft2;
+
+        List<Move> moves = getMoves(board, currentPlayer, currentWalls);
 
         if (maximizing) {
+
             int maxEval = Integer.MIN_VALUE;
 
             for (Move move : moves) {
+
                 Board copy = board.copy();
                 applyMove(copy, move);
 
-                int eval = alphaBeta(copy, depth - 1, alpha, beta, false, playerId, size);
+                int nextWalls1 = wallsLeft1;
+                int nextWalls2 = wallsLeft2;
+
+                if (move.getMoveType() == MoveType.PLACE_WALL) {
+                    if (currentPlayer == 1) nextWalls1--;
+                    else nextWalls2--;
+                }
+
+                int eval = alphaBeta(copy,
+                        depth - 1,
+                        alpha,
+                        beta,
+                        false,
+                        playerId,
+                        size,
+                        nextWalls1,
+                        nextWalls2);
 
                 maxEval = Math.max(maxEval, eval);
                 alpha = Math.max(alpha, eval);
@@ -75,14 +116,33 @@ public class AlphaBetaAlgorithm implements Algorithm {
             }
 
             return maxEval;
+
         } else {
+
             int minEval = Integer.MAX_VALUE;
 
             for (Move move : moves) {
+
                 Board copy = board.copy();
                 applyMove(copy, move);
 
-                int eval = alphaBeta(copy, depth - 1, alpha, beta, true, playerId, size);
+                int nextWalls1 = wallsLeft1;
+                int nextWalls2 = wallsLeft2;
+
+                if (move.getMoveType() == MoveType.PLACE_WALL) {
+                    if (currentPlayer == 1) nextWalls1--;
+                    else nextWalls2--;
+                }
+
+                int eval = alphaBeta(copy,
+                        depth - 1,
+                        alpha,
+                        beta,
+                        true,
+                        playerId,
+                        size,
+                        nextWalls1,
+                        nextWalls2);
 
                 minEval = Math.min(minEval, eval);
                 beta = Math.min(beta, eval);
@@ -92,63 +152,5 @@ public class AlphaBetaAlgorithm implements Algorithm {
 
             return minEval;
         }
-    }
-
-    private List<Move> getMoves(Board board, int playerId) {
-        String pos = playerId == 1
-                ? board.getPositionOfPlayer1()
-                : board.getPositionOfPlayer2();
-
-        return board.getAvailableMoves(pos).stream()
-                .map(p -> Move.movePlayer(playerId, p))
-                .toList();
-    }
-
-    private int shortestPath(Board board, String start, int targetRow) {
-        Set<String> visited = new HashSet<>();
-        Queue<String> queue = new LinkedList<>();
-
-        queue.add(start);
-        visited.add(start);
-
-        int depth = 0;
-
-        while (!queue.isEmpty()) {
-            int size = queue.size();
-
-            for (int k = 0; k < size; k++) {
-                String cur = queue.poll();
-
-                int i = cur.charAt(0) - '0';
-                if (i == targetRow) return depth;
-
-                for (String next : board.getAvailableMoves(cur)) {
-                    if (!visited.contains(next)) {
-                        visited.add(next);
-                        queue.add(next);
-                    }
-                }
-            }
-            depth++;
-        }
-
-        return 1000;
-    }
-
-    private int evaluate(Board board, int playerId, int size) {
-        int myDist = shortestPath(board, getMyPosition(board, playerId), getTargetRow(playerId, size));
-        int enemyDist = shortestPath(board, getMyPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
-
-        return enemyDist - myDist;
-    }
-
-    private int getTargetRow(int playerId, int size) {
-        return playerId == 1 ? size - 1 : 0;
-    }
-
-    private String getMyPosition(Board board, int playerId) {
-        return playerId == 1
-                ? board.getPositionOfPlayer1()
-                : board.getPositionOfPlayer2();
     }
 }
