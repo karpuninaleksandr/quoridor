@@ -6,7 +6,7 @@ import ru.ac.uniyar.model.Move;
 //реализация интерфейса Player для пользователя - методы будут ожидать его вводимых действий
 public class HumanPlayer extends Player {
     @Override
-    public Move getMove(Board board, int playerId) {
+    public Move getMove(Board board, int playerId, int amountOfWallsLeft) {
         //запрос хода от пользователя происходит с UI
         return null;
     }

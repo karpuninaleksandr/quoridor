@@ -13,7 +13,7 @@ public class ComputerPlayer extends Player {
     private ComputerPlayerHardnessLevel hardnessLevel;
 
     @Override
-    public Move getMove(Board board, int playerId) {
-        return algorithm.getMove(board, hardnessLevel, playerId);
+    public Move getMove(Board board, int playerId, int amountOfWallsLeft) {
+        return algorithm.getMove(board, hardnessLevel, playerId, amountOfWallsLeft);
     }
 }

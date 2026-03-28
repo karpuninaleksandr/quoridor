@@ -56,7 +56,7 @@ public class GamePageController extends VerticalLayout {
         Game game = gameProcessor.getGame();
         if (game == null) return;
 
-        turnLabel.setText("Ход игрока: P" + game.getCurrentPlayer());
+        turnLabel.setText("Ход игрока: P" + gameProcessor.getCurrentPlayer().getPlayerId());
 
         Player p1 = game.getPlayer1();
         Player p2 = game.getPlayer2();
@@ -107,9 +107,9 @@ public class GamePageController extends VerticalLayout {
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
 
-                        int current = game.getCurrentPlayer();
+                        int current = gameProcessor.getCurrentPlayer().getPlayerId();
 
-                        String from = game.getCurrentPlayer() == 1 ? board.getPositionOfPlayer1() : board.getPositionOfPlayer2();
+                        String from = current == 1 ? board.getPositionOfPlayer1() : board.getPositionOfPlayer2();
 
                         List<String> allowed = board.getAvailableMoves(from);
 
@@ -278,7 +278,8 @@ public class GamePageController extends VerticalLayout {
 
         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
 
-            Move move = gameProcessor.getCurrentPlayer().getMove(game.getBoard(), game.getCurrentPlayer());
+            Move move = gameProcessor.getCurrentPlayer().getMove(game.getBoard(), gameProcessor.getCurrentPlayer().getPlayerId(),
+                    gameProcessor.getCurrentPlayer().getAmountOfWallsLeft());
 
             if (move != null) gameProcessor.makeMove(move);
 
