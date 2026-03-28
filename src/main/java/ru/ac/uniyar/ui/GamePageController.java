@@ -5,18 +5,12 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.router.Route;
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Game;
 import ru.ac.uniyar.model.Move;
-import ru.ac.uniyar.model.players.ComputerPlayer;
 import ru.ac.uniyar.model.players.HumanPlayer;
 import ru.ac.uniyar.service.GameProcessor;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @Route("/game")
 public class GamePageController extends VerticalLayout {
@@ -24,12 +18,6 @@ public class GamePageController extends VerticalLayout {
     private final GameProcessor gameProcessor;
     private final Div boardGrid = new Div();
     private final H1 turnLabel = new H1();
-    private final ScheduledExecutorService executor =
-            Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r);
-                t.setDaemon(true);
-                return t;
-            });
 
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
@@ -118,10 +106,6 @@ public class GamePageController extends VerticalLayout {
         }
 
         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
-            System.out.println("COMPPPP");
-
-//            executor.schedule(() -> {
-
                 Game currentGame = gameProcessor.getGame();
 
                 Move move = gameProcessor.getCurrentPlayer().getMove(currentGame.getBoard());
@@ -136,8 +120,6 @@ public class GamePageController extends VerticalLayout {
                         processTurn();
                     });
                 }
-
-//            }, 300, TimeUnit.MILLISECONDS);
         }
     }
 }
