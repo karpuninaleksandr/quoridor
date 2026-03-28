@@ -1,7 +1,9 @@
 package ru.ac.uniyar.ui;
 
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
@@ -27,10 +29,18 @@ public class GamePageController extends VerticalLayout {
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
 
+        Button restartButton = new Button("Начать сначала");
+        restartButton.addClickListener(e -> goToStart());
+
         add(new H1("Игра"));
         add(turnLabel);
         add(wallsLabel);
         add(boardGrid);
+        add(restartButton);
+    }
+
+    private void goToStart() {
+        UI.getCurrent().navigate("start");
     }
 
     @Override
@@ -97,18 +107,49 @@ public class GamePageController extends VerticalLayout {
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
 
-                        gameProcessor.makeMove(
-                                Move.movePlayer(game.getCurrentPlayer(), pos)
-                        );
+                        int current = game.getCurrentPlayer();
+
+                        String from = game.getCurrentPlayer() == 1 ? board.getPositionOfPlayer1() : board.getPositionOfPlayer2();
+
+                        List<String> allowed = board.getAvailableMoves(from);
+
+                        if (!allowed.contains(pos)) {
+                            Notification.show("Нельзя ходить сюда", 1000, Notification.Position.MIDDLE);
+                            return;
+                        }
+
+                        try {
+                            gameProcessor.makeMove(
+                                    Move.movePlayer(current, pos)
+                            );
+                        } catch (Exception ex) {
+                            Notification.show("Некорректный ход", 1000, Notification.Position.MIDDLE);
+                            return;
+                        }
 
                         renderBoard();
                         processTurn();
                     });
 
                 } else {
-                    cell.setWidth("10px");
-                    cell.setHeight("10px");
-                    cell.getStyle().set("background", "#eee");
+
+                    boolean horizontalGap = (i % 2 == 1 && j % 2 == 0);
+                    boolean verticalGap = (i % 2 == 0 && j % 2 == 1);
+
+                    if (horizontalGap) {
+                        cell.setWidth("50px");
+                        cell.setHeight("5px");
+                    } else if (verticalGap) {
+                        cell.setWidth("5px");
+                        cell.setHeight("50px");
+                    } else {
+                        cell.setWidth("5px");
+                        cell.setHeight("5px");
+                    }
+
+                    cell.getStyle()
+                            .set("background", "#eaeaea")
+                            .set("cursor", "pointer");
 
                     final int fi = i;
                     final int fj = j;
@@ -140,7 +181,7 @@ public class GamePageController extends VerticalLayout {
 
             placeWall2x1(
                     ci, cj,
-                    ci + 1, cj
+                    ci, cj + 1
             );
             return;
         }
@@ -154,7 +195,7 @@ public class GamePageController extends VerticalLayout {
 
             placeWall2x1(
                     ci, cj,
-                    ci, cj + 1
+                    ci - 1, cj
             );
         }
     }
