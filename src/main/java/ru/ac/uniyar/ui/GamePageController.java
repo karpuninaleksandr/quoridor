@@ -1,37 +1,52 @@
 package ru.ac.uniyar.ui;
 
+import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.router.Route;
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Game;
 import ru.ac.uniyar.model.Move;
+import ru.ac.uniyar.model.players.ComputerPlayer;
+import ru.ac.uniyar.model.players.HumanPlayer;
 import ru.ac.uniyar.service.GameProcessor;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Route("/game")
 public class GamePageController extends VerticalLayout {
-
+    private UI ui;
     private final GameProcessor gameProcessor;
     private final Div boardGrid = new Div();
+    private final H1 turnLabel = new H1();
+    private final ScheduledExecutorService executor =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r);
+                t.setDaemon(true);
+                return t;
+            });
 
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
 
         add(new H1("Игра"));
-
+        add(turnLabel);
         add(boardGrid);
+    }
 
-        Button nextMove = new Button("Следующий ход");
-        nextMove.addClickListener(e -> {
-//            gameProcessor.makeHumanMove(m);
-            renderBoard();
-        });
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
 
-        add(nextMove);
+        this.ui = attachEvent.getUI();
 
         renderBoard();
+        processTurn();
     }
 
     private void renderBoard() {
@@ -42,6 +57,9 @@ public class GamePageController extends VerticalLayout {
             add(new H1("Ошибка: игра не создана"));
             return;
         }
+
+        turnLabel.setText("Ход игрока: P" + game.getCurrentPlayer());
+
         Board board = game.getBoard();
         int size = game.getGameSize().getAmountOfTilesPerSide();
 
@@ -49,8 +67,8 @@ public class GamePageController extends VerticalLayout {
                 .set("display", "grid")
                 .set("grid-template-columns", "repeat(" + size + ", 50px)");
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
+        for (int i = size - 1; i >= 0; --i) {
+            for (int j = size - 1; j >= 0; --j) {
                 String pos = i + "" + j;
 
                 Div cell = new Div();
@@ -74,17 +92,52 @@ public class GamePageController extends VerticalLayout {
                 }
 
                 cell.addClickListener(e -> {
-                    Move move = Move.movePlayer(
-                            game.getCurrentPlayer(),
-                            pos
-                    );
+                    if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
+                        return;
+                    }
 
-                    gameProcessor.makeHumanMove(move);
+                    Move move = Move.movePlayer(game.getCurrentPlayer(), pos);
+
+                    gameProcessor.makeMove(move);
+
                     renderBoard();
+                    processTurn();
                 });
 
                 boardGrid.add(cell);
             }
+        }
+    }
+
+    private void processTurn() {
+        Game game = gameProcessor.getGame();
+
+        if (game.isFinished()) {
+            turnLabel.setText("Игра окончена");
+            return;
+        }
+
+        if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
+            System.out.println("COMPPPP");
+
+//            executor.schedule(() -> {
+
+                Game currentGame = gameProcessor.getGame();
+
+                Move move = gameProcessor.getCurrentPlayer().getMove(currentGame.getBoard());
+
+                if (move != null) {
+                    gameProcessor.makeMove(move);
+                }
+
+                if (ui != null && ui.isAttached()) {
+                    ui.access(() -> {
+                        renderBoard();
+                        processTurn();
+                    });
+                }
+
+//            }, 300, TimeUnit.MILLISECONDS);
         }
     }
 }

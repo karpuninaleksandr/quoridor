@@ -72,27 +72,14 @@ public class GameProcessor {
         game.setCurrentPlayer(Math.random() > 0.5 ? 1 : 2);
     }
 
-    public void makeHumanMove(Move move) {
+    public void makeMove(Move move) {
         if (game.isFinished()) return;
 
         game.applyMove(move);
         switchTurn();
-
-        triggerAI();
     }
 
-    public void triggerAI() {
-        Player current = getCurrentPlayer();
-
-        if (current instanceof HumanPlayer) return;
-
-        Move move = current.getMove(game.getBoard());
-        game.applyMove(move);
-
-        switchTurn();
-    }
-
-    private Player getCurrentPlayer() {
+    public Player getCurrentPlayer() {
         return game.getCurrentPlayer() == 1
                 ? game.getPlayer1()
                 : game.getPlayer2();

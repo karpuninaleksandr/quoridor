@@ -4,7 +4,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 //класс описывающий состояние игрового поля
@@ -54,5 +56,61 @@ public class Board {
             bottomLeft.setRightMovementAvailable(false);
             bottomRight.setLeftMovementAvailable(false);
         }
+    }
+
+    public List<String> getAvailableMoves(String pos) {
+        List<String> result = new ArrayList<>();
+
+        int i = pos.charAt(0) - '0';
+        int j = pos.charAt(1) - '0';
+
+        BoardTile tile = tiles.get(pos);
+        if (tile == null) return result;
+
+        if (tile.isLeftMovementAvailable()) {
+            String next = i + "" + (j - 1);
+            if (tiles.containsKey(next)) result.add(next);
+        }
+
+        if (tile.isRightMovementAvailable()) {
+            String next = i + "" + (j + 1);
+            if (tiles.containsKey(next)) result.add(next);
+        }
+
+        if (tile.isForwardMovementAvailable()) {
+            String next = (i - 1) + "" + j;
+            if (tiles.containsKey(next)) result.add(next);
+        }
+
+        if (tile.isBackwardsMovementAvailable()) {
+            String next = (i + 1) + "" + j;
+            if (tiles.containsKey(next)) result.add(next);
+        }
+
+        return result;
+    }
+
+    public Board copy() {
+        Board copy = new Board();
+
+        Map<String, BoardTile> newTiles = new HashMap<>();
+
+        for (Map.Entry<String, BoardTile> entry : tiles.entrySet()) {
+            BoardTile t = entry.getValue();
+
+            newTiles.put(entry.getKey(), new BoardTile(
+                    t.isLeftMovementAvailable(),
+                    t.isForwardMovementAvailable(),
+                    t.isRightMovementAvailable(),
+                    t.isBackwardsMovementAvailable()
+            ));
+        }
+
+        copy.setTiles(newTiles);
+
+        copy.setPositionOfPlayer1(positionOfPlayer1);
+        copy.setPositionOfPlayer2(positionOfPlayer2);
+
+        return copy;
     }
 }
