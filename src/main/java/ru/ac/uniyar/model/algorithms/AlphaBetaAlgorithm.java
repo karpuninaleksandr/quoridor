@@ -2,20 +2,21 @@ package ru.ac.uniyar.model.algorithms;
 
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
-import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
-import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
-import ru.ac.uniyar.model.enums.MoveType;
+import ru.ac.uniyar.model.enums.*;
 
 import java.util.*;
 
 public class AlphaBetaAlgorithm implements Algorithm {
+
     @Override
     public ComputerAlgorithmType getType() {
         return ComputerAlgorithmType.ALPHABETA;
     }
 
     @Override
-    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int amountOfWallsLeft) {
+    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel,
+                        int playerId, int amountOfWallsLeft) {
+
         int depth = switch (hardnessLevel) {
             case EASY -> 1;
             case MEDIUM -> 2;
@@ -26,6 +27,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
 
         List<Move> moves = getMoves(board, playerId, amountOfWallsLeft);
 
+        moves.sort((a, b) -> moveScore(board, b, playerId, size)
+                - moveScore(board, a, playerId, size));
+
         Move bestMove = null;
         int bestValue = Integer.MIN_VALUE;
 
@@ -35,21 +39,27 @@ public class AlphaBetaAlgorithm implements Algorithm {
 
             int nextWalls = amountOfWallsLeft;
             if (move.getMoveType() == MoveType.PLACE_WALL) {
-                --nextWalls;
+                nextWalls--;
             }
 
-            int eval = alphaBeta(copy, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false, playerId,
-                    size, amountOfWallsLeft, nextWalls);
+            int eval = alphaBeta(copy, depth - 1,
+                    Integer.MIN_VALUE, Integer.MAX_VALUE,
+                    false, playerId, size,
+                    amountOfWallsLeft, nextWalls);
 
             if (eval > bestValue) {
                 bestValue = eval;
                 bestMove = move;
             }
         }
+
         return bestMove;
     }
 
-    private int alphaBeta(Board board, int depth, int alpha, int beta, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2) {
+    private int alphaBeta(Board board, int depth, int alpha, int beta,
+                          boolean maximizing, int playerId, int size,
+                          int wallsLeft1, int wallsLeft2) {
+
         if (depth == 0) {
             return evaluate(board, playerId, size);
         }
@@ -58,6 +68,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
         int currentWalls = currentPlayer == 1 ? wallsLeft1 : wallsLeft2;
 
         List<Move> moves = getMoves(board, currentPlayer, currentWalls);
+
+        moves.sort((a, b) -> moveScore(board, b, playerId, size)
+                - moveScore(board, a, playerId, size));
 
         if (maximizing) {
             int maxEval = Integer.MIN_VALUE;
@@ -74,7 +87,10 @@ public class AlphaBetaAlgorithm implements Algorithm {
                     else nextWalls2--;
                 }
 
-                int eval = alphaBeta(copy, depth - 1, alpha, beta, false, playerId, size, nextWalls1, nextWalls2);
+                int eval = alphaBeta(copy, depth - 1,
+                        alpha, beta, false,
+                        playerId, size,
+                        nextWalls1, nextWalls2);
 
                 maxEval = Math.max(maxEval, eval);
                 alpha = Math.max(alpha, eval);
@@ -97,7 +113,10 @@ public class AlphaBetaAlgorithm implements Algorithm {
                     else nextWalls2--;
                 }
 
-                int eval = alphaBeta(copy, depth - 1, alpha, beta, true, playerId, size, nextWalls1, nextWalls2);
+                int eval = alphaBeta(copy, depth - 1,
+                        alpha, beta, true,
+                        playerId, size,
+                        nextWalls1, nextWalls2);
 
                 minEval = Math.min(minEval, eval);
                 beta = Math.min(beta, eval);
@@ -106,5 +125,22 @@ public class AlphaBetaAlgorithm implements Algorithm {
             }
             return minEval;
         }
+    }
+
+    private int moveScore(Board board, Move move, int playerId, int size) {
+        Board copy = board.copy();
+        applyMove(copy, move);
+
+        int score = evaluate(copy, playerId, size);
+
+        if (move.getMoveType() == MoveType.MOVE_PLAYER) {
+            score += 5;
+        }
+
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            score -= 2;
+        }
+
+        return score;
     }
 }

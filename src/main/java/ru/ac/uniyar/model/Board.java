@@ -4,12 +4,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-//класс описывающий состояние игрового поля
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,33 +24,48 @@ public class Board {
         if (i1 == i2 && Math.abs(j1 - j2) == 1) {
             int j = Math.min(j1, j2);
 
-            BoardTile topLeft = tiles.get(i1 + "" + j);
-            BoardTile topRight = tiles.get(i1 + "" + (j + 1));
-            BoardTile bottomLeft = tiles.get((i1 + 1) + "" + j);
-            BoardTile bottomRight = tiles.get((i1 + 1) + "" + (j + 1));
+            BoardTile tl = tiles.get(i1 + "" + j);
+            BoardTile tr = tiles.get(i1 + "" + (j + 1));
+            BoardTile bl = tiles.get((i1 + 1) + "" + j);
+            BoardTile br = tiles.get((i1 + 1) + "" + (j + 1));
 
-            topLeft.setBackwardsMovementAvailable(false);
-            bottomLeft.setForwardMovementAvailable(false);
+            if (!tl.isBackwardsMovementAvailable() || !tr.isBackwardsMovementAvailable()) {
+                throw new RuntimeException("Wall overlap");
+            }
 
-            topRight.setBackwardsMovementAvailable(false);
-            bottomRight.setForwardMovementAvailable(false);
+            if (!tl.isRightMovementAvailable() && !bl.isRightMovementAvailable()) {
+                throw new RuntimeException("Wall crossing");
+            }
 
+            tl.setBackwardsMovementAvailable(false);
+            bl.setForwardMovementAvailable(false);
+
+            tr.setBackwardsMovementAvailable(false);
+            br.setForwardMovementAvailable(false);
             return;
         }
 
         if (j1 == j2 && Math.abs(i1 - i2) == 1) {
             int i = Math.min(i1, i2);
 
-            BoardTile topLeft = tiles.get(i + "" + j1);
-            BoardTile bottomLeft = tiles.get((i + 1) + "" + j1);
-            BoardTile topRight = tiles.get(i + "" + (j1 + 1));
-            BoardTile bottomRight = tiles.get((i + 1) + "" + (j1 + 1));
+            BoardTile tl = tiles.get(i + "" + j1);
+            BoardTile bl = tiles.get((i + 1) + "" + j1);
+            BoardTile tr = tiles.get(i + "" + (j1 + 1));
+            BoardTile br = tiles.get((i + 1) + "" + (j1 + 1));
 
-            topLeft.setRightMovementAvailable(false);
-            topRight.setLeftMovementAvailable(false);
+            if (!tl.isRightMovementAvailable() || !bl.isRightMovementAvailable()) {
+                throw new RuntimeException("Wall overlap");
+            }
 
-            bottomLeft.setRightMovementAvailable(false);
-            bottomRight.setLeftMovementAvailable(false);
+            if (!tl.isBackwardsMovementAvailable() && !tr.isBackwardsMovementAvailable()) {
+                throw new RuntimeException("Wall crossing");
+            }
+
+            tl.setRightMovementAvailable(false);
+            tr.setLeftMovementAvailable(false);
+
+            bl.setRightMovementAvailable(false);
+            br.setLeftMovementAvailable(false);
         }
     }
 
@@ -107,7 +118,6 @@ public class Board {
         }
 
         copy.setTiles(newTiles);
-
         copy.setPositionOfPlayer1(positionOfPlayer1);
         copy.setPositionOfPlayer2(positionOfPlayer2);
 

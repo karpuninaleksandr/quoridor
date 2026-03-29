@@ -8,7 +8,6 @@ import ru.ac.uniyar.model.enums.MoveType;
 
 import java.util.*;
 
-//интерфейс для взаимодействия с любым из алгоритмов для ComputerPlayer
 public interface Algorithm {
     ComputerAlgorithmType getType();
     Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int amountOfWallsLeft);
@@ -17,6 +16,7 @@ public interface Algorithm {
         List<Move> moves = new ArrayList<>();
         String pos = getCurrentPosition(board, playerId);
 
+        // 🎯 1. Обычные ходы (всегда приоритет)
         for (String availableMove : board.getAvailableMoves(pos)) {
             moves.add(Move.movePlayer(playerId, availableMove));
         }
@@ -25,24 +25,81 @@ public interface Algorithm {
 
         int size = (int) Math.sqrt(board.getTiles().size());
 
-        for (int i = 0; i < size - 1; i++) {
-            for (int j = 0; j < size - 1; j++) {
-                String a1 = i + "" + j;
-                String a2 = i + "" + (j + 1);
+        // 🔥 2. Стены вдоль кратчайшего пути противника
+        List<String> enemyPath = getShortestPathCells(
+                board,
+                getCurrentPosition(board, 3 - playerId),
+                getTargetRow(3 - playerId, size)
+        );
 
-                if (isValidWall(board, a1, a2)) {
-                    moves.add(Move.placeWall(playerId, a1, a2));
-                }
+        Set<String> used = new HashSet<>();
 
+        for (String cell : enemyPath) {
+            int i = cell.charAt(0) - '0';
+            int j = cell.charAt(1) - '0';
+
+            // вертикальная стена
+            if (i < size - 1) {
                 String b1 = i + "" + j;
                 String b2 = (i + 1) + "" + j;
 
-                if (isValidWall(board, b1, b2)) {
+                String key = b1 + "-" + b2;
+                if (used.add(key) && isValidWall(board, b1, b2)) {
                     moves.add(Move.placeWall(playerId, b1, b2));
                 }
             }
+
+            // горизонтальная стена
+            if (j < size - 1) {
+                String a1 = i + "" + j;
+                String a2 = i + "" + (j + 1);
+
+                String key = a1 + "-" + a2;
+                if (used.add(key) && isValidWall(board, a1, a2)) {
+                    moves.add(Move.placeWall(playerId, a1, a2));
+                }
+            }
         }
+
         return moves;
+    }
+
+    // 🔥 восстановление кратчайшего пути (ключевая часть)
+    default List<String> getShortestPathCells(Board board, String start, int targetRow) {
+        Map<String, String> parent = new HashMap<>();
+        Queue<String> queue = new ArrayDeque<>();
+        Set<String> visited = new HashSet<>();
+
+        queue.add(start);
+        visited.add(start);
+
+        String end = null;
+
+        while (!queue.isEmpty()) {
+            String curr = queue.poll();
+            int i = curr.charAt(0) - '0';
+
+            if (i == targetRow) {
+                end = curr;
+                break;
+            }
+
+            for (String next : board.getAvailableMoves(curr)) {
+                if (visited.add(next)) {
+                    parent.put(next, curr);
+                    queue.add(next);
+                }
+            }
+        }
+
+        List<String> path = new ArrayList<>();
+
+        while (end != null) {
+            path.add(end);
+            end = parent.get(end);
+        }
+
+        return path;
     }
 
     default boolean isValidWall(Board board, String startPosition, String endPosition) {
@@ -61,7 +118,7 @@ public interface Algorithm {
         int size = (int) Math.sqrt(board.getTiles().size());
 
         Set<String> visited = new HashSet<>();
-        Queue<String> queue = new LinkedList<>();
+        Queue<String> queue = new ArrayDeque<>();
 
         queue.add(start);
         visited.add(start);
@@ -100,19 +157,25 @@ public interface Algorithm {
             return;
         }
 
-        if (move.getMoveType() == MoveType.PLACE_WALL) {
-            board.placeWall(move.getStartPosition(), move.getEndPosition());
-        }
+        board.placeWall(move.getStartPosition(), move.getEndPosition());
     }
 
+    // ⚡ оценка позиции
     default int evaluate(Board board, int playerId, int size) {
-        return calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size))
-                - calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
+        int myDist = calculateShortestPath(board,
+                getCurrentPosition(board, playerId),
+                getTargetRow(playerId, size));
+
+        int enemyDist = calculateShortestPath(board,
+                getCurrentPosition(board, 3 - playerId),
+                getTargetRow(3 - playerId, size));
+
+        return enemyDist - myDist;
     }
 
     default int calculateShortestPath(Board board, String start, int targetRow) {
         Set<String> visited = new HashSet<>();
-        Queue<String> queue = new LinkedList<>();
+        Queue<String> queue = new ArrayDeque<>();
 
         queue.add(start);
         visited.add(start);
@@ -120,8 +183,7 @@ public interface Algorithm {
         int depth = 0;
 
         while (!queue.isEmpty()) {
-            int size = queue.size();
-            for (int k = 0; k < size; ++k) {
+            for (int k = queue.size(); k > 0; --k) {
                 String curr = queue.poll();
 
                 int i = curr.charAt(0) - '0';
@@ -133,7 +195,7 @@ public interface Algorithm {
                     }
                 }
             }
-            ++depth;
+            depth++;
         }
         return 1000;
     }
