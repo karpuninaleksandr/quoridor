@@ -103,7 +103,6 @@ public class Board {
 
     public Board copy() {
         Board copy = new Board();
-
         Map<String, BoardTile> newTiles = new HashMap<>();
 
         for (Map.Entry<String, BoardTile> entry : tiles.entrySet()) {

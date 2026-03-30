@@ -17,7 +17,6 @@ import java.util.*;
 
 @Route("/game")
 public class GamePageController extends VerticalLayout {
-
     private UI ui;
     private final GameProcessor gameProcessor;
 
@@ -45,8 +44,6 @@ public class GamePageController extends VerticalLayout {
         processTurn();
     }
 
-    // ================== РЕНДЕР ==================
-
     private void renderBoard() {
         boardGrid.removeAll();
 
@@ -58,8 +55,7 @@ public class GamePageController extends VerticalLayout {
         Player p1 = game.getPlayer1();
         Player p2 = game.getPlayer2();
 
-        wallsLabel.setText("Стены: P1=" + p1.getAmountOfWallsLeft()
-                + " | P2=" + p2.getAmountOfWallsLeft());
+        wallsLabel.setText("Стены: P1=" + p1.getAmountOfWallsLeft() + " | P2=" + p2.getAmountOfWallsLeft());
 
         Board board = game.getBoard();
 
@@ -82,7 +78,6 @@ public class GamePageController extends VerticalLayout {
                 Div cell = new Div();
                 boolean isTile = (i % 2 == 0 && j % 2 == 0);
 
-                // ================= TILE =================
                 if (isTile) {
                     int ci = i / 2;
                     int cj = j / 2;
@@ -125,7 +120,6 @@ public class GamePageController extends VerticalLayout {
                     });
                 }
 
-                // ================= GAP =================
                 else {
 
                     boolean horizontalGap = (i % 2 == 1 && j % 2 == 0);
@@ -174,14 +168,9 @@ public class GamePageController extends VerticalLayout {
                     final int fi = i;
                     final int fj = j;
 
-                    // ================= PREVIEW =================
-                    cell.getElement().addEventListener("mouseover", e -> {
-                        highlightWallPreview(fi, fj);
-                    });
+                    cell.getElement().addEventListener("mouseover", e -> highlightWallPreview(fi, fj));
 
-                    cell.getElement().addEventListener("mouseout", e -> {
-                        renderBoard();
-                    });
+                    cell.getElement().addEventListener("mouseout", e -> renderBoard());
 
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
@@ -194,23 +183,21 @@ public class GamePageController extends VerticalLayout {
         }
     }
 
-    // ================= PREVIEW =================
-
     private void highlightWallPreview(int i, int j) {
         if (i % 2 == 1 && j % 2 == 0) {
-            setGapColor(i, j, "orange");
-            setGapColor(i, j + 2, "orange");
-            setGapColor(i, j + 1, "orange");
+            setGapColor(i, j);
+            setGapColor(i, j + 2);
+            setGapColor(i, j + 1);
         }
 
         if (i % 2 == 0 && j % 2 == 1) {
-            setGapColor(i, j, "orange");
-            setGapColor(i + 2, j, "orange");
-            setGapColor(i + 1, j, "orange");
+            setGapColor(i, j);
+            setGapColor(i + 2, j);
+            setGapColor(i + 1, j);
         }
     }
 
-    private void setGapColor(int i, int j, String color) {
+    private void setGapColor(int i, int j) {
         int size = gameProcessor.getGame().getGameSize().getAmountOfTilesPerSide();
         int renderSize = size * 2 - 1;
 
@@ -219,14 +206,11 @@ public class GamePageController extends VerticalLayout {
         int index = i * renderSize + j;
         if (index < boardGrid.getChildren().count()) {
             Div cell = (Div) boardGrid.getChildren().toArray()[index];
-            cell.getStyle().set("background", color);
+            cell.getStyle().set("background", "orange");
         }
     }
 
-    // ================= WALL LOGIC =================
-
     private void tryPlaceWall(int i, int j) {
-
         Game game = gameProcessor.getGame();
         if (game == null) return;
 
@@ -251,7 +235,6 @@ public class GamePageController extends VerticalLayout {
     }
 
     private void placeWall(int i1, int j1, int i2, int j2) {
-
         Game game = gameProcessor.getGame();
         Board copy = game.getBoard().copy();
 
@@ -278,10 +261,7 @@ public class GamePageController extends VerticalLayout {
         ui.access(this::processTurn);
     }
 
-    // ================= BFS =================
-
     private boolean hasPath(Board board, String start, boolean toBottom) {
-
         int size = gameProcessor.getGame().getGameSize().getAmountOfTilesPerSide();
 
         Set<String> visited = new HashSet<>();
@@ -323,7 +303,6 @@ public class GamePageController extends VerticalLayout {
         }
 
         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
-
             Move move = gameProcessor.getCurrentPlayer().getMove(
                     game.getBoard(),
                     gameProcessor.getCurrentPlayer().getPlayerId(),
