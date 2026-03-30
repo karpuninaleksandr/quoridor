@@ -17,9 +17,9 @@ public class MinimaxAlgorithm implements Algorithm {
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int amountOfWallsLeft) {
         int depth = switch (hardnessLevel) {
-            case EASY -> 1;
-            case MEDIUM -> 2;
-            case HARD -> 3;
+            case EASY -> 2;
+            case MEDIUM -> 4;
+            case HARD -> 10;
         };
 
         int size = (int) Math.sqrt(board.getTiles().size());
@@ -50,7 +50,7 @@ public class MinimaxAlgorithm implements Algorithm {
 
     private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         if (depth == 0) {
-            return evaluate(board, playerId, size);
+            return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
         }
 
         int currentPlayer = maximizing ? playerId : (3 - playerId);

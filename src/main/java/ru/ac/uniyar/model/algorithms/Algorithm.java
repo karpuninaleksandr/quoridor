@@ -16,7 +16,6 @@ public interface Algorithm {
         List<Move> moves = new ArrayList<>();
         String pos = getCurrentPosition(board, playerId);
 
-        // 🎯 1. Обычные ходы (всегда приоритет)
         for (String availableMove : board.getAvailableMoves(pos)) {
             moves.add(Move.movePlayer(playerId, availableMove));
         }
@@ -25,7 +24,6 @@ public interface Algorithm {
 
         int size = (int) Math.sqrt(board.getTiles().size());
 
-        // 🔥 2. Стены вдоль кратчайшего пути противника
         List<String> enemyPath = getShortestPathCells(
                 board,
                 getCurrentPosition(board, 3 - playerId),
@@ -38,7 +36,6 @@ public interface Algorithm {
             int i = cell.charAt(0) - '0';
             int j = cell.charAt(1) - '0';
 
-            // вертикальная стена
             if (i < size - 1) {
                 String b1 = i + "" + j;
                 String b2 = (i + 1) + "" + j;
@@ -49,7 +46,6 @@ public interface Algorithm {
                 }
             }
 
-            // горизонтальная стена
             if (j < size - 1) {
                 String a1 = i + "" + j;
                 String a2 = i + "" + (j + 1);
@@ -64,7 +60,6 @@ public interface Algorithm {
         return moves;
     }
 
-    // 🔥 восстановление кратчайшего пути (ключевая часть)
     default List<String> getShortestPathCells(Board board, String start, int targetRow) {
         Map<String, String> parent = new HashMap<>();
         Queue<String> queue = new ArrayDeque<>();
@@ -160,8 +155,7 @@ public interface Algorithm {
         board.placeWall(move.getStartPosition(), move.getEndPosition());
     }
 
-    // ⚡ оценка позиции
-    default int evaluate(Board board, int playerId, int size) {
+    default int evaluate(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         int myDist = calculateShortestPath(board,
                 getCurrentPosition(board, playerId),
                 getTargetRow(playerId, size));
@@ -170,7 +164,19 @@ public interface Algorithm {
                 getCurrentPosition(board, 3 - playerId),
                 getTargetRow(3 - playerId, size));
 
-        return enemyDist - myDist;
+        int myWalls = (playerId == 1) ? wallsLeft1 : wallsLeft2;
+        int enemyWalls = (playerId == 1) ? wallsLeft2 : wallsLeft1;
+
+        int myMoves = board.getAvailableMoves(getCurrentPosition(board, playerId)).size();
+        int enemyMoves = board.getAvailableMoves(getCurrentPosition(board, 3 - playerId)).size();
+
+        int score = 0;
+
+        score += (enemyDist - myDist) * 10;
+        score += (myWalls - enemyWalls) * 3;
+        score += (myMoves - enemyMoves) * 2;
+
+        return score;
     }
 
     default int calculateShortestPath(Board board, String start, int targetRow) {
