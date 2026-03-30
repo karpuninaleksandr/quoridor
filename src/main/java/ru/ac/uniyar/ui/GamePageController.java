@@ -12,12 +12,12 @@ import ru.ac.uniyar.model.*;
 import ru.ac.uniyar.model.players.HumanPlayer;
 import ru.ac.uniyar.model.players.Player;
 import ru.ac.uniyar.service.GameProcessor;
-import ru.ac.uniyar.model.algorithms.Algorithm;
 
-import java.util.*;
+import java.util.List;
 
 @Route("/game")
 public class GamePageController extends VerticalLayout {
+
     private UI ui;
     private final GameProcessor gameProcessor;
 
@@ -74,6 +74,7 @@ public class GamePageController extends VerticalLayout {
 
         for (int i = 0; i < renderSize; i++) {
             for (int j = 0; j < renderSize; j++) {
+
                 Div cell = new Div();
                 boolean isTile = (i % 2 == 0 && j % 2 == 0);
 
@@ -104,16 +105,20 @@ public class GamePageController extends VerticalLayout {
 
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
+
                         if (!allowedMoves.contains(pos)) {
                             Notification.show("Нельзя ходить сюда", 1000, Notification.Position.MIDDLE);
                             return;
                         }
+
                         gameProcessor.makeMove(
                                 Move.movePlayer(gameProcessor.getCurrentPlayer().getPlayerId(), pos)
                         );
+
                         renderBoard();
                         processTurn();
                     });
+
                 } else {
                     boolean horizontalGap = (i % 2 == 1 && j % 2 == 0);
                     boolean verticalGap = (i % 2 == 0 && j % 2 == 1);
@@ -130,6 +135,7 @@ public class GamePageController extends VerticalLayout {
                     }
 
                     boolean isWall = false;
+
                     if (horizontalGap) {
                         int ci = i / 2;
                         int cj = j / 2;
@@ -138,8 +144,9 @@ public class GamePageController extends VerticalLayout {
                         BoardTile middle = board.getTiles().get(ci + "" + cj);
                         BoardTile right = board.getTiles().get(ci + "" + (cj - 1));
 
-                        isWall = ((left != null && !left.isBackwardsMovementAvailable()) || (right != null && !right.isBackwardsMovementAvailable())) &&
-                                (middle != null && !middle.isBackwardsMovementAvailable());
+                        isWall = ((left != null && !left.isBackwardsMovementAvailable()) ||
+                                (right != null && !right.isBackwardsMovementAvailable()))
+                                && (middle != null && !middle.isBackwardsMovementAvailable());
                     }
 
                     if (verticalGap) {
@@ -150,8 +157,9 @@ public class GamePageController extends VerticalLayout {
                         BoardTile middle = board.getTiles().get(ci + "" + cj);
                         BoardTile bottom = board.getTiles().get((ci - 1) + "" + cj);
 
-                        isWall = ((top != null && !top.isRightMovementAvailable()) ||  (bottom != null && !bottom.isRightMovementAvailable())) &&
-                                (middle != null && !middle.isRightMovementAvailable());
+                        isWall = ((top != null && !top.isRightMovementAvailable()) ||
+                                (bottom != null && !bottom.isRightMovementAvailable()))
+                                && (middle != null && !middle.isRightMovementAvailable());
                     }
 
                     cell.getStyle().set("background", isWall ? "brown" : "#eaeaea");
@@ -159,170 +167,113 @@ public class GamePageController extends VerticalLayout {
                     final int fi = i;
                     final int fj = j;
 
-                    cell.getElement().addEventListener("mouseover", e -> highlightWallPreviewIfValid(fi, fj));
+                    cell.getElement().addEventListener("mouseover", e -> highlightIfValid(fi, fj));
                     cell.getElement().addEventListener("mouseout", e -> renderBoard());
-                    cell.addClickListener(e -> {
-                        if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
-                        tryPlaceWall(fi, fj);
-                    });
+                    cell.addClickListener(e -> tryPlaceWall(fi, fj));
                 }
+
                 boardGrid.add(cell);
             }
         }
     }
 
-    private void highlightWallPreview(int i, int j) {
-        if (i % 2 == 1 && j % 2 == 0) {
-            setGapColor(i, j);
-            setGapColor(i, j + 2);
-            setGapColor(i, j + 1);
-        }
-        if (i % 2 == 0 && j % 2 == 1) {
-            setGapColor(i, j);
-            setGapColor(i + 2, j);
-            setGapColor(i + 1, j);
+    private void highlightIfValid(int i, int j) {
+        int[] w = extractWall(i, j);
+        if (w == null) return;
+
+        if (gameProcessor.canPlaceWall(w[0], w[1], w[2], w[3])) {
+            highlightWallPreview(i, j);
         }
     }
-    private void highlightWallPreviewIfValid(int i, int j) {
+
+    private void tryPlaceWall(int i, int j) {
+        int[] w = extractWall(i, j);
+        if (w == null) return;
+
+        if (!gameProcessor.tryPlaceWall(w[0], w[1], w[2], w[3])) {
+            Notification.show("Некорректная стена", 1000, Notification.Position.MIDDLE);
+            return;
+        }
+
+        renderBoard();
+        ui.access(this::processTurn);
+    }
+
+    private int[] extractWall(int i, int j) {
         Game game = gameProcessor.getGame();
-        if (game == null) return;
-        if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
-        if (!gameProcessor.getCurrentPlayer().canPlaceWall()) return;
+        if (game == null) return null;
 
         int ci = i / 2;
         int cj = j / 2;
         int size = game.getGameSize().getAmountOfTilesPerSide();
 
-        int i1, j1, i2, j2;
-
-        // определяем ориентацию стены
-        if (i % 2 == 1 && j % 2 == 0) { // горизонтальная
-            if (cj + 1 >= size || ci + 1 >= size) return;
-            i1 = ci; j1 = cj;
-            i2 = ci; j2 = cj + 1;
-        } else if (i % 2 == 0 && j % 2 == 1) { // вертикальная
-            if (ci + 1 >= size || cj + 1 >= size) return;
-            i1 = ci; j1 = cj;
-            i2 = ci + 1; j2 = cj;
-        } else {
-            return;
+        if (i % 2 == 1 && j % 2 == 0) {
+            if (cj + 1 >= size || ci + 1 >= size) return null;
+            return new int[]{ci, cj, ci, cj + 1};
         }
 
-        // 🔥 ПРОВЕРКА (та же логика, что в placeWall)
-        Board copy = game.getBoard().copy();
-
-        try {
-            copy.placeWall(i1 + "" + j1, i2 + "" + j2);
-        } catch (Exception e) {
-            return;
+        if (i % 2 == 0 && j % 2 == 1) {
+            if (ci + 1 >= size || cj + 1 >= size) return null;
+            return new int[]{ci, cj, ci + 1, cj};
         }
 
-        if (!hasPath(copy, copy.getPositionOfPlayer1(), 1) ||
-                !hasPath(copy, copy.getPositionOfPlayer2(), 2)) {
-            return;
-        }
+        return null;
+    }
 
-        highlightWallPreview(i, j);
+    private void highlightWallPreview(int i, int j) {
+        if (i % 2 == 1 && j % 2 == 0) {
+            setGapColor(i, j);
+            setGapColor(i, j + 1);
+            setGapColor(i, j + 2);
+        }
+        if (i % 2 == 0 && j % 2 == 1) {
+            setGapColor(i, j);
+            setGapColor(i + 1, j);
+            setGapColor(i + 2, j);
+        }
     }
 
     private void setGapColor(int i, int j) {
         int size = gameProcessor.getGame().getGameSize().getAmountOfTilesPerSide();
         int renderSize = size * 2 - 1;
+
         if (i < 0 || j < 0 || i >= renderSize || j >= renderSize) return;
 
         int index = i * renderSize + j;
+
         if (index < boardGrid.getChildren().count()) {
             Div cell = (Div) boardGrid.getChildren().toArray()[index];
             cell.getStyle().set("background", "orange");
         }
     }
 
-    private void tryPlaceWall(int i, int j) {
-        Game game = gameProcessor.getGame();
-        if (game == null) return;
-        if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
-        if (!gameProcessor.getCurrentPlayer().canPlaceWall()) return;
-
-        int ci = i / 2;
-        int cj = j / 2;
-        int size = game.getGameSize().getAmountOfTilesPerSide();
-
-        if (i % 2 == 1 && j % 2 == 0) {
-            if (cj + 1 >= size || ci + 1 >= size) return;
-            placeWall(ci, cj, ci, cj + 1);
-            return;
-        }
-        if (i % 2 == 0 && j % 2 == 1) {
-            if (ci + 1 >= size || cj + 1 >= size) return;
-            placeWall(ci, cj, ci + 1, cj);
-        }
-    }
-
-    private void placeWall(int i1, int j1, int i2, int j2) {
-        Game game = gameProcessor.getGame();
-        Board copy = game.getBoard().copy();
-
-        try {
-            copy.placeWall(i1 + "" + j1, i2 + "" + j2);
-        } catch (Exception e) {
-            notifyInvalid();
-            return;
-        }
-
-        int playerId = gameProcessor.getCurrentPlayer().getPlayerId();
-        if (!hasPath(copy, copy.getPositionOfPlayer1(), 1) || !hasPath(copy, copy.getPositionOfPlayer2(), 2)) {
-            notifyInvalid();
-            return;
-        }
-
-        gameProcessor.makeMove(
-                Move.placeWall(playerId, i1 + "" + j1, i2 + "" + j2)
-        );
-
-        renderBoard();
-        ui.access(this::processTurn);
-    }
-
-    private boolean hasPath(Board board, String start, int playerId) {
-        int size = gameProcessor.getGame().getGameSize().getAmountOfTilesPerSide();
-        int targetRow = (playerId == 1) ? 0 : size - 1;
-
-        Set<String> visited = new HashSet<>();
-        Queue<String> q = new LinkedList<>();
-        q.add(start);
-        visited.add(start);
-
-        while (!q.isEmpty()) {
-            String cur = q.poll();
-            int i = cur.charAt(0) - '0';
-            if (i == targetRow) return true;
-            for (String next : board.getAvailableMoves(cur)) {
-                if (visited.add(next)) q.add(next);
-            }
-        }
-        return false;
-    }
-
     private String buildTemplate(int size) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < size; i++) sb.append(i % 2 == 0 ? "50px " : "10px ");
+        for (int i = 0; i < size; i++) {
+            sb.append(i % 2 == 0 ? "50px " : "10px ");
+        }
         return sb.toString();
     }
 
     private void processTurn() {
         Game game = gameProcessor.getGame();
+
         if (game.isFinished()) {
             turnLabel.setText("Игра окончена");
             return;
         }
 
         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
+
             Move move = gameProcessor.getCurrentPlayer().getMove(
                     game.getBoard(),
                     gameProcessor.getCurrentPlayer().getPlayerId(),
                     gameProcessor.getCurrentPlayer().getAmountOfWallsLeft()
             );
-            if (move != null) gameProcessor.makeMove(move);
+
+            if (move != null) {
+                gameProcessor.makeMove(move);
+            }
 
             if (ui != null && ui.isAttached()) {
                 ui.access(() -> {
@@ -331,9 +282,5 @@ public class GamePageController extends VerticalLayout {
                 });
             }
         }
-    }
-
-    private void notifyInvalid() {
-        Notification.show("Некорректная стена", 1000, Notification.Position.MIDDLE);
     }
 }
