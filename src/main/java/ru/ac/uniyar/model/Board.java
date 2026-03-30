@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 
 @Getter
 @Setter
@@ -75,30 +76,72 @@ public class Board {
         int i = pos.charAt(0) - '0';
         int j = pos.charAt(1) - '0';
 
+        String opponent = pos.equals(positionOfPlayer1) ? positionOfPlayer2 : positionOfPlayer1;
+
         BoardTile tile = tiles.get(pos);
         if (tile == null) return result;
 
+        BiConsumer<String, String> handleMove = (next, behind) -> {
+            if (!tiles.containsKey(next)) return;
+
+            if (!next.equals(opponent)) {
+                result.add(next);
+                return;
+            }
+
+            if (behind != null && tiles.containsKey(behind)
+                    && !isBlocked(next, behind)) {
+
+                result.add(behind);
+            }
+        };
+
         if (tile.isLeftMovementAvailable()) {
             String next = i + "" + (j - 1);
-            if (tiles.containsKey(next)) result.add(next);
+            String behind = i + "" + (j - 2);
+            handleMove.accept(next, behind);
         }
 
         if (tile.isRightMovementAvailable()) {
             String next = i + "" + (j + 1);
-            if (tiles.containsKey(next)) result.add(next);
+            String behind = i + "" + (j + 2);
+            handleMove.accept(next, behind);
         }
 
         if (tile.isForwardMovementAvailable()) {
             String next = (i - 1) + "" + j;
-            if (tiles.containsKey(next)) result.add(next);
+            String behind = (i - 2) + "" + j;
+            handleMove.accept(next, behind);
         }
 
         if (tile.isBackwardsMovementAvailable()) {
             String next = (i + 1) + "" + j;
-            if (tiles.containsKey(next)) result.add(next);
+            String behind = (i + 2) + "" + j;
+            handleMove.accept(next, behind);
         }
 
         return result;
+    }
+
+    private boolean isBlocked(String from, String to) {
+        BoardTile tile = tiles.get(from);
+        int i1 = from.charAt(0) - '0';
+        int j1 = from.charAt(1) - '0';
+
+        int i2 = to.charAt(0) - '0';
+        int j2 = to.charAt(1) - '0';
+
+        if (i1 == i2) {
+            if (j2 > j1) return !tile.isRightMovementAvailable();
+            else return !tile.isLeftMovementAvailable();
+        }
+
+        if (j1 == j2) {
+            if (i2 > i1) return !tile.isBackwardsMovementAvailable();
+            else return !tile.isForwardMovementAvailable();
+        }
+
+        return true;
     }
 
     public Board copy() {
