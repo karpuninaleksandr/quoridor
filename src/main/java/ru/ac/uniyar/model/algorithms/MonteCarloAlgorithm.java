@@ -131,8 +131,8 @@ public class MonteCarloAlgorithm implements Algorithm {
     private boolean isWin(Board board, int playerId, int size) {
         String pos = getCurrentPosition(board, playerId);
         int row = pos.charAt(0) - '0';
-        return (playerId == 1 && row == size - 1) ||
-                (playerId == 2 && row == 0);
+        return (playerId == 1 && row == 0) ||
+                (playerId == 2 && row == size - 1);
     }
 
     static class Node {

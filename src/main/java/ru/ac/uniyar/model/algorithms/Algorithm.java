@@ -40,8 +40,13 @@ public interface Algorithm {
                 String b1 = i + "" + j;
                 String b2 = (i + 1) + "" + j;
 
+                if (!isWallPlaceable(board, b1, b2)) continue;
+
                 String key = b1 + "-" + b2;
-                if (used.add(key) && isValidWall(board, b1, b2)) {
+                if (used.add(key)
+                        && isWallPlaceable(board, b1, b2)
+                        && isValidWall(board, b1, b2)) {
+
                     moves.add(Move.placeWall(playerId, b1, b2));
                 }
             }
@@ -51,13 +56,26 @@ public interface Algorithm {
                 String a2 = i + "" + (j + 1);
 
                 String key = a1 + "-" + a2;
-                if (used.add(key) && isValidWall(board, a1, a2)) {
+                if (used.add(key)
+                        && isWallPlaceable(board, a1, a2)
+                        && isValidWall(board, a1, a2)) {
+
                     moves.add(Move.placeWall(playerId, a1, a2));
                 }
             }
         }
 
         return moves;
+    }
+
+    default boolean isWallPlaceable(Board board, String p1, String p2) {
+        try {
+            Board copy = board.copy();
+            copy.placeWall(p1, p2);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     default List<String> getShortestPathCells(Board board, String start, int targetRow) {
@@ -102,16 +120,16 @@ public interface Algorithm {
             Board copy = board.copy();
             copy.placeWall(startPosition, endPosition);
 
-            return hasPathToTheEnd(copy, copy.getPositionOfPlayer1(), true)
-                    && hasPathToTheEnd(copy, copy.getPositionOfPlayer2(), false);
+            int size = (int) Math.sqrt(board.getTiles().size());
+
+            return hasPath(copy, copy.getPositionOfPlayer1(), 0)
+                    && hasPath(copy, copy.getPositionOfPlayer2(), size - 1);
         } catch (Exception e) {
             return false;
         }
     }
 
-    private boolean hasPathToTheEnd(Board board, String start, boolean toBottom) {
-        int size = (int) Math.sqrt(board.getTiles().size());
-
+    private boolean hasPath(Board board, String start, int targetRow) {
         Set<String> visited = new HashSet<>();
         Queue<String> queue = new ArrayDeque<>();
 
@@ -122,8 +140,7 @@ public interface Algorithm {
             String curr = queue.poll();
             int i = curr.charAt(0) - '0';
 
-            if (toBottom && i == size - 1) return true;
-            if (!toBottom && i == 0) return true;
+            if (i == targetRow) return true;
 
             for (String next : board.getAvailableMoves(curr)) {
                 if (visited.add(next)) {
@@ -139,7 +156,7 @@ public interface Algorithm {
     }
 
     default int getTargetRow(int playerId, int size) {
-        return playerId == 1 ? size - 1 : 0;
+        return playerId == 1 ? 0 : size - 1;
     }
 
     default void applyMove(Board board, Move move) {

@@ -25,20 +25,22 @@ public class GameProcessor {
 
     public Board initBoard(GameSize gameSize) {
         Board board = new Board();
+        int size = gameSize.getAmountOfTilesPerSide();
 
-        for (int i = 0; i < gameSize.getAmountOfTilesPerSide(); ++i) {
-            for (int j = 0; j < gameSize.getAmountOfTilesPerSide(); ++j) {
+        for (int i = 0; i < size; ++i) {
+            for (int j = 0; j < size; ++j) {
                 board.getTiles().put(i + "" + j, new BoardTile(
                         j != 0,
                         i != 0,
-                        j != gameSize.getAmountOfTilesPerSide() - 1,
-                        i != gameSize.getAmountOfTilesPerSide() - 1
+                        j != size - 1,
+                        i != size - 1
                 ));
             }
         }
 
-        board.setPositionOfPlayer1("0".concat(String.valueOf((gameSize.getAmountOfTilesPerSide() - 1) / 2)));
-        board.setPositionOfPlayer2(String.valueOf(gameSize.getAmountOfTilesPerSide() - 1).concat(String.valueOf((gameSize.getAmountOfTilesPerSide() - 1) / 2)));
+        int mid = (size - 1) / 2;
+        board.setPositionOfPlayer1((size - 1) + "" + mid);
+        board.setPositionOfPlayer2("0" + mid);
 
         return board;
     }

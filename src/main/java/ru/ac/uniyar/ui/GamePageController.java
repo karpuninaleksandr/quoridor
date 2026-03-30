@@ -12,6 +12,7 @@ import ru.ac.uniyar.model.*;
 import ru.ac.uniyar.model.players.HumanPlayer;
 import ru.ac.uniyar.model.players.Player;
 import ru.ac.uniyar.service.GameProcessor;
+import ru.ac.uniyar.model.algorithms.Algorithm;
 
 import java.util.*;
 
@@ -58,7 +59,6 @@ public class GamePageController extends VerticalLayout {
         wallsLabel.setText("Стены: P1=" + p1.getAmountOfWallsLeft() + " | P2=" + p2.getAmountOfWallsLeft());
 
         Board board = game.getBoard();
-
         int size = game.getGameSize().getAmountOfTilesPerSide();
         int renderSize = size * 2 - 1;
 
@@ -74,7 +74,6 @@ public class GamePageController extends VerticalLayout {
 
         for (int i = 0; i < renderSize; i++) {
             for (int j = 0; j < renderSize; j++) {
-
                 Div cell = new Div();
                 boolean isTile = (i % 2 == 0 && j % 2 == 0);
 
@@ -105,23 +104,17 @@ public class GamePageController extends VerticalLayout {
 
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
-
                         if (!allowedMoves.contains(pos)) {
                             Notification.show("Нельзя ходить сюда", 1000, Notification.Position.MIDDLE);
                             return;
                         }
-
                         gameProcessor.makeMove(
                                 Move.movePlayer(gameProcessor.getCurrentPlayer().getPlayerId(), pos)
                         );
-
                         renderBoard();
                         processTurn();
                     });
-                }
-
-                else {
-
+                } else {
                     boolean horizontalGap = (i % 2 == 1 && j % 2 == 0);
                     boolean verticalGap = (i % 2 == 0 && j % 2 == 1);
 
@@ -137,7 +130,6 @@ public class GamePageController extends VerticalLayout {
                     }
 
                     boolean isWall = false;
-
                     if (horizontalGap) {
                         int ci = i / 2;
                         int cj = j / 2;
@@ -147,7 +139,7 @@ public class GamePageController extends VerticalLayout {
                         BoardTile right = board.getTiles().get(ci + "" + (cj - 1));
 
                         isWall = ((left != null && !left.isBackwardsMovementAvailable()) || (right != null && !right.isBackwardsMovementAvailable())) &&
-                                        (middle != null && !middle.isBackwardsMovementAvailable());
+                                (middle != null && !middle.isBackwardsMovementAvailable());
                     }
 
                     if (verticalGap) {
@@ -158,9 +150,8 @@ public class GamePageController extends VerticalLayout {
                         BoardTile middle = board.getTiles().get(ci + "" + cj);
                         BoardTile bottom = board.getTiles().get((ci - 1) + "" + cj);
 
-                        isWall =
-                                ((top != null && !top.isRightMovementAvailable()) ||  (bottom != null && !bottom.isRightMovementAvailable()))&&
-                                        (middle != null && !middle.isRightMovementAvailable());
+                        isWall = ((top != null && !top.isRightMovementAvailable()) ||  (bottom != null && !bottom.isRightMovementAvailable())) &&
+                                (middle != null && !middle.isRightMovementAvailable());
                     }
 
                     cell.getStyle().set("background", isWall ? "brown" : "#eaeaea");
@@ -169,15 +160,12 @@ public class GamePageController extends VerticalLayout {
                     final int fj = j;
 
                     cell.getElement().addEventListener("mouseover", e -> highlightWallPreview(fi, fj));
-
                     cell.getElement().addEventListener("mouseout", e -> renderBoard());
-
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
                         tryPlaceWall(fi, fj);
                     });
                 }
-
                 boardGrid.add(cell);
             }
         }
@@ -189,7 +177,6 @@ public class GamePageController extends VerticalLayout {
             setGapColor(i, j + 2);
             setGapColor(i, j + 1);
         }
-
         if (i % 2 == 0 && j % 2 == 1) {
             setGapColor(i, j);
             setGapColor(i + 2, j);
@@ -200,7 +187,6 @@ public class GamePageController extends VerticalLayout {
     private void setGapColor(int i, int j) {
         int size = gameProcessor.getGame().getGameSize().getAmountOfTilesPerSide();
         int renderSize = size * 2 - 1;
-
         if (i < 0 || j < 0 || i >= renderSize || j >= renderSize) return;
 
         int index = i * renderSize + j;
@@ -213,21 +199,18 @@ public class GamePageController extends VerticalLayout {
     private void tryPlaceWall(int i, int j) {
         Game game = gameProcessor.getGame();
         if (game == null) return;
-
         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
         if (!gameProcessor.getCurrentPlayer().canPlaceWall()) return;
 
-        int size = game.getGameSize().getAmountOfTilesPerSide();
-
         int ci = i / 2;
         int cj = j / 2;
+        int size = game.getGameSize().getAmountOfTilesPerSide();
 
         if (i % 2 == 1 && j % 2 == 0) {
             if (cj + 1 >= size || ci + 1 >= size) return;
             placeWall(ci, cj, ci, cj + 1);
             return;
         }
-
         if (i % 2 == 0 && j % 2 == 1) {
             if (ci + 1 >= size || cj + 1 >= size) return;
             placeWall(ci, cj, ci + 1, cj);
@@ -245,58 +228,48 @@ public class GamePageController extends VerticalLayout {
             return;
         }
 
-        if (!hasPath(copy, copy.getPositionOfPlayer1(), true)
-                || !hasPath(copy, copy.getPositionOfPlayer2(), false)) {
+        int playerId = gameProcessor.getCurrentPlayer().getPlayerId();
+        if (!hasPath(copy, copy.getPositionOfPlayer1(), 1) || !hasPath(copy, copy.getPositionOfPlayer2(), 2)) {
             notifyInvalid();
             return;
         }
 
         gameProcessor.makeMove(
-                Move.placeWall(gameProcessor.getCurrentPlayer().getPlayerId(),
-                        i1 + "" + j1,
-                        i2 + "" + j2)
+                Move.placeWall(playerId, i1 + "" + j1, i2 + "" + j2)
         );
 
         renderBoard();
         ui.access(this::processTurn);
     }
 
-    private boolean hasPath(Board board, String start, boolean toBottom) {
+    private boolean hasPath(Board board, String start, int playerId) {
         int size = gameProcessor.getGame().getGameSize().getAmountOfTilesPerSide();
+        int targetRow = (playerId == 1) ? 0 : size - 1;
 
         Set<String> visited = new HashSet<>();
         Queue<String> q = new LinkedList<>();
-
         q.add(start);
         visited.add(start);
 
         while (!q.isEmpty()) {
-
             String cur = q.poll();
             int i = cur.charAt(0) - '0';
-
-            if (toBottom && i == size - 1) return true;
-            if (!toBottom && i == 0) return true;
-
+            if (i == targetRow) return true;
             for (String next : board.getAvailableMoves(cur)) {
                 if (visited.add(next)) q.add(next);
             }
         }
-
         return false;
     }
 
     private String buildTemplate(int size) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < size; i++) {
-            sb.append(i % 2 == 0 ? "50px " : "10px ");
-        }
+        for (int i = 0; i < size; i++) sb.append(i % 2 == 0 ? "50px " : "10px ");
         return sb.toString();
     }
 
     private void processTurn() {
         Game game = gameProcessor.getGame();
-
         if (game.isFinished()) {
             turnLabel.setText("Игра окончена");
             return;
@@ -308,7 +281,6 @@ public class GamePageController extends VerticalLayout {
                     gameProcessor.getCurrentPlayer().getPlayerId(),
                     gameProcessor.getCurrentPlayer().getAmountOfWallsLeft()
             );
-
             if (move != null) gameProcessor.makeMove(move);
 
             if (ui != null && ui.isAttached()) {

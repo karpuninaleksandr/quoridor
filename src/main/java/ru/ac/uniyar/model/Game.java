@@ -50,7 +50,7 @@ public class Game {
         int player1Row = board.getPositionOfPlayer1().charAt(0) - '0';
         int player2Row = board.getPositionOfPlayer2().charAt(0) - '0';
 
-        if (player1Row == gameSize.getAmountOfTilesPerSide() - 1 || player2Row == 0) {
+        if (player1Row == 0 || player2Row == gameSize.getAmountOfTilesPerSide() - 1) {
             finished = true;
         }
     }
