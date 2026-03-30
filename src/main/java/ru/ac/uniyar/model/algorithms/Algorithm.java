@@ -16,21 +16,21 @@ public interface Algorithm {
         List<Move> moves = new ArrayList<>();
         String pos = getCurrentPosition(board, playerId);
 
-        for (String availableMove : board.getAvailableMoves(pos)) {
-            moves.add(Move.movePlayer(playerId, availableMove));
+        for (String next : board.getAvailableMoves(pos)) {
+            moves.add(Move.movePlayer(playerId, next));
         }
 
         if (wallsLeft <= 0) return moves;
 
         int size = (int) Math.sqrt(board.getTiles().size());
 
+        Set<String> used = new HashSet<>();
+
         List<String> enemyPath = getShortestPathCells(
                 board,
                 getCurrentPosition(board, 3 - playerId),
                 getTargetRow(3 - playerId, size)
         );
-
-        Set<String> used = new HashSet<>();
 
         for (String cell : enemyPath) {
             int i = cell.charAt(0) - '0';
@@ -39,14 +39,9 @@ public interface Algorithm {
             if (i < size - 1) {
                 String b1 = i + "" + j;
                 String b2 = (i + 1) + "" + j;
-
-                if (!isWallPlaceable(board, b1, b2)) continue;
-
                 String key = b1 + "-" + b2;
-                if (used.add(key)
-                        && isWallPlaceable(board, b1, b2)
-                        && isValidWall(board, b1, b2)) {
 
+                if (used.add(key) && isWallPlaceable(board, b1, b2) && isValidWall(board, b1, b2)) {
                     moves.add(Move.placeWall(playerId, b1, b2));
                 }
             }
@@ -54,12 +49,9 @@ public interface Algorithm {
             if (j < size - 1) {
                 String a1 = i + "" + j;
                 String a2 = i + "" + (j + 1);
-
                 String key = a1 + "-" + a2;
-                if (used.add(key)
-                        && isWallPlaceable(board, a1, a2)
-                        && isValidWall(board, a1, a2)) {
 
+                if (used.add(key) && isWallPlaceable(board, a1, a2) && isValidWall(board, a1, a2)) {
                     moves.add(Move.placeWall(playerId, a1, a2));
                 }
             }
@@ -151,14 +143,6 @@ public interface Algorithm {
         return false;
     }
 
-    default String getCurrentPosition(Board board, int playerId) {
-        return playerId == 1 ? board.getPositionOfPlayer1() : board.getPositionOfPlayer2();
-    }
-
-    default int getTargetRow(int playerId, int size) {
-        return playerId == 1 ? 0 : size - 1;
-    }
-
     default void applyMove(Board board, Move move) {
         if (move.getMoveType() == MoveType.MOVE_PLAYER) {
             if (move.getPlayerId() == 1) {
@@ -166,10 +150,17 @@ public interface Algorithm {
             } else {
                 board.setPositionOfPlayer2(move.getEndPosition());
             }
-            return;
+        } else {
+            board.placeWall(move.getStartPosition(), move.getEndPosition());
         }
+    }
 
-        board.placeWall(move.getStartPosition(), move.getEndPosition());
+    default String getCurrentPosition(Board board, int playerId) {
+        return playerId == 1 ? board.getPositionOfPlayer1() : board.getPositionOfPlayer2();
+    }
+
+    default int getTargetRow(int playerId, int size) {
+        return playerId == 1 ? 0 : size - 1;
     }
 
     default int evaluate(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
