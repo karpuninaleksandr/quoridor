@@ -159,7 +159,7 @@ public class GamePageController extends VerticalLayout {
                     final int fi = i;
                     final int fj = j;
 
-                    cell.getElement().addEventListener("mouseover", e -> highlightWallPreview(fi, fj));
+                    cell.getElement().addEventListener("mouseover", e -> highlightWallPreviewIfValid(fi, fj));
                     cell.getElement().addEventListener("mouseout", e -> renderBoard());
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
@@ -182,6 +182,47 @@ public class GamePageController extends VerticalLayout {
             setGapColor(i + 2, j);
             setGapColor(i + 1, j);
         }
+    }
+    private void highlightWallPreviewIfValid(int i, int j) {
+        Game game = gameProcessor.getGame();
+        if (game == null) return;
+        if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
+        if (!gameProcessor.getCurrentPlayer().canPlaceWall()) return;
+
+        int ci = i / 2;
+        int cj = j / 2;
+        int size = game.getGameSize().getAmountOfTilesPerSide();
+
+        int i1, j1, i2, j2;
+
+        // определяем ориентацию стены
+        if (i % 2 == 1 && j % 2 == 0) { // горизонтальная
+            if (cj + 1 >= size || ci + 1 >= size) return;
+            i1 = ci; j1 = cj;
+            i2 = ci; j2 = cj + 1;
+        } else if (i % 2 == 0 && j % 2 == 1) { // вертикальная
+            if (ci + 1 >= size || cj + 1 >= size) return;
+            i1 = ci; j1 = cj;
+            i2 = ci + 1; j2 = cj;
+        } else {
+            return;
+        }
+
+        // 🔥 ПРОВЕРКА (та же логика, что в placeWall)
+        Board copy = game.getBoard().copy();
+
+        try {
+            copy.placeWall(i1 + "" + j1, i2 + "" + j2);
+        } catch (Exception e) {
+            return;
+        }
+
+        if (!hasPath(copy, copy.getPositionOfPlayer1(), 1) ||
+                !hasPath(copy, copy.getPositionOfPlayer2(), 2)) {
+            return;
+        }
+
+        highlightWallPreview(i, j);
     }
 
     private void setGapColor(int i, int j) {
