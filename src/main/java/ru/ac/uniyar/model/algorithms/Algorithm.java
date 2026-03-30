@@ -4,6 +4,7 @@ import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
+import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.enums.MoveType;
 
 import java.util.*;
@@ -212,5 +213,13 @@ public interface Algorithm {
             depth++;
         }
         return 1000;
+    }
+
+    default long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
+        return switch (level) {
+            case EASY -> 2000L * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case MEDIUM -> 3500L * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case HARD -> 5000L * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+        };
     }
 }
