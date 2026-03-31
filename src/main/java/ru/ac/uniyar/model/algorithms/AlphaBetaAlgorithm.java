@@ -9,7 +9,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
     /**
      * уже посчитанные ранее позиции
      */
-    private final Map<String, Integer> transposition = new HashMap<>();
+    private final Map<String, Integer> cache = new HashMap<>();
     /**
      * ходы, которые часто приводят к хорошим отсечениям
      */
@@ -100,14 +100,14 @@ public class AlphaBetaAlgorithm implements Algorithm {
             return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
         }
         String key = board.hashCode() + "|" + depth + "|" + max + "|" + wallsLeft1 + "|" + wallsLeft2;
-        Integer cached = transposition.get(key);
+        Integer cached = cache.get(key);
         if (cached != null) {
             return cached;
         }
 
         if (depth == 0) {
             int eval = evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
-            transposition.put(key, eval);
+            cache.put(key, eval);
             return eval;
         }
 
@@ -158,7 +158,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
             }
         }
 
-        transposition.put(key, best);
+        cache.put(key, best);
         return best;
     }
 
