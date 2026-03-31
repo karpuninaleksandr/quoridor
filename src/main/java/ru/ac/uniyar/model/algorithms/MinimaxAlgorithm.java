@@ -45,6 +45,9 @@ public class MinimaxAlgorithm implements Algorithm {
                 evaluateMove(board, b, playerId, size, wallsLeft1, wallsLeft2),
                 evaluateMove(board, a, playerId, size, wallsLeft1, wallsLeft2)
         ));
+        if (moves.size() > 20) {
+            moves = moves.subList(0, 20);
+        }
 
         Move bestMove = null;
         int bestValue = Integer.MIN_VALUE;
@@ -63,8 +66,7 @@ public class MinimaxAlgorithm implements Algorithm {
                 else --newWallsLeft2;
             }
 
-            int value = minimax(copy, depth - 1, false, playerId, size, newWallsLeft1, newWallsLeft2,
-                    Integer.MIN_VALUE, Integer.MAX_VALUE, endTime);
+            int value = minimax(copy, depth - 1, false, playerId, size, newWallsLeft1, newWallsLeft2, endTime);
 
             if (value > bestValue) {
                 bestValue = value;
@@ -75,8 +77,11 @@ public class MinimaxAlgorithm implements Algorithm {
         return bestMove;
     }
 
-    private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2, int alpha,
-                        int beta, long endTime) {
+    private int minimax(Board board, int depth, boolean maximizing,
+                        int playerId, int size,
+                        int wallsLeft1, int wallsLeft2,
+                        long endTime) {
+
         checkTime(endTime);
 
         String key = board.hashCode() + "|" + depth + "|" + maximizing;
@@ -108,27 +113,25 @@ public class MinimaxAlgorithm implements Algorithm {
             if (move.getMoveType() == MoveType.PLACE_WALL) {
                 if (current == 1) {
                     --newWallsLeft1;
+                } else {
+                    --newWallsLeft2;
                 }
-                else --newWallsLeft2;
             }
 
-            int val = minimax(copy, depth - 1, !maximizing, playerId, size, newWallsLeft1, newWallsLeft2, alpha, beta, endTime);
+            int val = minimax(copy, depth - 1, !maximizing,
+                    playerId, size, newWallsLeft1, newWallsLeft2, endTime);
 
             if (maximizing) {
                 if (val > best) {
                     best = val;
                     bestMovesInHistory.put(depth, move);
                 }
-                alpha = Math.max(alpha, val);
             } else {
                 if (val < best) {
                     best = val;
                     bestMovesInHistory.put(depth, move);
                 }
-                beta = Math.min(beta, val);
             }
-
-            if (beta <= alpha) break;
         }
 
         cache.put(key, best);

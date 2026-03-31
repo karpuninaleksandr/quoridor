@@ -29,6 +29,7 @@ public interface Algorithm {
         Set<String> used = new HashSet<>();
         List<String> enemyPath = getShortestPathCells(board, getCurrentPosition(board, 3 - playerId),
                 getTargetRow(3 - playerId, size));
+        enemyPath = enemyPath.subList(0, Math.min(5, enemyPath.size()));
 
         for (String cell : enemyPath) {
             int i = cell.charAt(0) - '0';
@@ -40,7 +41,16 @@ public interface Algorithm {
                 String wallKey = start + "-" + end;
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
-                    moves.add(Move.placeWall(playerId, start, end));
+                    Board copy = board.copy();
+                    int before = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
+
+                    copy.placeWall(start, end);
+
+                    int after = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
+
+                    if (after - before >= 2) {
+                        moves.add(Move.placeWall(playerId, start, end));
+                    }
                 }
             }
 
@@ -50,7 +60,16 @@ public interface Algorithm {
                 String wallKey = start + "-" + end;
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
-                    moves.add(Move.placeWall(playerId, start, end));
+                    Board copy = board.copy();
+                    int before = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
+
+                    copy.placeWall(start, end);
+
+                    int after = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
+
+                    if (after - before >= 2) {
+                        moves.add(Move.placeWall(playerId, start, end));
+                    }
                 }
             }
         }
@@ -162,16 +181,22 @@ public interface Algorithm {
     }
 
     default int evaluate(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
-        int myDist = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
-        int enemyDist = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
+        String myPos = getCurrentPosition(board, playerId);
+        String enemyPos = getCurrentPosition(board, 3 - playerId);
 
-        int score = (enemyDist - myDist) * 30;
+        int myDist = calculateShortestPath(board, myPos, getTargetRow(playerId, size));
+        int enemyDist = calculateShortestPath(board, enemyPos, getTargetRow(3 - playerId, size));
 
-        score += board.getAvailableMoves(getCurrentPosition(board, playerId)).size() * 3;
+        int score = (enemyDist - myDist) * 100;
 
-        score += (wallsLeft1 - wallsLeft2) * 5;
+        int myMoves = board.getAvailableMoves(myPos).size();
+        int enemyMoves = board.getAvailableMoves(enemyPos).size();
+        score += (myMoves - enemyMoves) * 10;
 
-        score -= Math.abs(getCurrentPosition(board, playerId).charAt(1) - '0' - size / 2) * 2;
+        score += (wallsLeft1 - wallsLeft2) * 15;
+
+        int col = myPos.charAt(1) - '0';
+        score -= Math.abs(col - size / 2) * 5;
 
         return score;
     }

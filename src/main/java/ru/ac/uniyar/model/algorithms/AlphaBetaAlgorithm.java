@@ -45,6 +45,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
     private Move search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
         List<Move> moves = getMoves(board, playerId, wallsLeft1);
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0);
+        if (moves.size() > 20) {
+            moves = moves.subList(0, 20);
+        }
 
         Move bestMove = null;
         int best = Integer.MIN_VALUE;
@@ -81,7 +84,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
                           int wallsLeft2, long endTime, int ply) {
         if (System.currentTimeMillis() > endTime) return 0;
 
-        String key = board.toString() + depth + wallsLeft1 + wallsLeft2;
+        String key = board.hashCode() + "|" + depth + "|" + wallsLeft1 + "|" + wallsLeft2;
         Integer cached = transposition.get(key);
         if (cached != null) return cached;
 
@@ -151,7 +154,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
             score += 8000;
         }
 
-        score += history.getOrDefault(move.toString(), 0);
+        score += history.getOrDefault(move.toString(), 0) * 2;
 
         Board copy = board.copy();
         applyMove(copy, move);

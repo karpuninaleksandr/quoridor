@@ -27,11 +27,13 @@ public class MonteCarloAlgorithm implements Algorithm {
 
         Node root = new Node(board.copy(), null, null, playerId, wallsLeft, wallsLeft);
 
-        while (System.currentTimeMillis() < System.currentTimeMillis() + getTimeLimit(hardnessLevel, size)) {
+        long endTime = System.currentTimeMillis() + getTimeLimit(hardnessLevel, size);
+
+        while (System.currentTimeMillis() < endTime) {
             Node node = select(root);
             Node expanded = expand(node);
 
-            int winner = simulateSmart(expanded, rolloutDepth, playerId, size);
+            int winner = simulate(expanded, rolloutDepth, playerId, size);
 
             backpropagate(expanded, winner, playerId);
 
@@ -78,7 +80,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return node.children.get(random.nextInt(node.children.size()));
     }
 
-    private int simulateSmart(Node node, int maxSteps, int rootPlayer, int size) {
+    private int simulate(Node node, int maxSteps, int rootPlayer, int size) {
         Board board = node.board.copy();
         int currentPlayer = node.player;
         int wallsLeft1 = node.walls1;
@@ -101,7 +103,7 @@ public class MonteCarloAlgorithm implements Algorithm {
 
             Move best = null;
             int bestScore = Integer.MIN_VALUE;
-            for (int k = 0; k < 4 && k < moves.size(); ++k) {
+            for (int k = 0; k < 10 && k < moves.size(); ++k) {
                 Move m = moves.get(random.nextInt(moves.size()));
 
                 Board tmp = board.copy();
@@ -148,7 +150,7 @@ public class MonteCarloAlgorithm implements Algorithm {
 
         double exploitation = n.wins / n.visits;
         double exploration = C * Math.sqrt(Math.log(n.parent.visits) / n.visits);
-        double heuristic = evaluate(n.board, n.parent.player, (int) Math.sqrt(n.board.getTiles().size()), n.walls1, n.walls2) * 0.01;
+        double heuristic = evaluate(n.board, n.parent.player, (int) Math.sqrt(n.board.getTiles().size()), n.walls1, n.walls2) * 0.05;
 
         return exploitation + exploration + heuristic;
     }
