@@ -8,6 +8,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.VaadinSession;
 import ru.ac.uniyar.model.*;
 import ru.ac.uniyar.model.players.HumanPlayer;
 import ru.ac.uniyar.model.players.Player;
@@ -258,7 +259,9 @@ public class GamePageController extends VerticalLayout {
     private void processTurn() {
         Game game = gameProcessor.getGame();
 
-        if (game.isFinished()) {
+        if (game != null && game.isFinished()) {
+            VaadinSession.getCurrent().setAttribute("game", game);
+            ui.navigate("statistics");
             turnLabel.setText("Игра окончена");
             return;
         }
