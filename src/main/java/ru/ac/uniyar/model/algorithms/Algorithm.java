@@ -29,7 +29,7 @@ public interface Algorithm {
         Set<String> used = new HashSet<>();
         List<String> enemyPath = getShortestPathCells(board, getCurrentPosition(board, 3 - playerId),
                 getTargetRow(3 - playerId, size));
-        enemyPath = enemyPath.subList(0, Math.min(5, enemyPath.size()));
+        enemyPath = enemyPath.subList(0, Math.min(8, enemyPath.size()));
 
         for (String cell : enemyPath) {
             int i = cell.charAt(0) - '0';
@@ -48,7 +48,7 @@ public interface Algorithm {
 
                     int after = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
 
-                    if (after - before >= 2) {
+                    if (after > before) {
                         moves.add(Move.placeWall(playerId, start, end));
                     }
                 }
@@ -67,7 +67,7 @@ public interface Algorithm {
 
                     int after = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
 
-                    if (after - before >= 2) {
+                    if (after > before) {
                         moves.add(Move.placeWall(playerId, start, end));
                     }
                 }
@@ -181,22 +181,14 @@ public interface Algorithm {
     }
 
     default int evaluate(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
-        String myPos = getCurrentPosition(board, playerId);
-        String enemyPos = getCurrentPosition(board, 3 - playerId);
+        int myDist = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
+        int enemyDist = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
 
-        int myDist = calculateShortestPath(board, myPos, getTargetRow(playerId, size));
-        int enemyDist = calculateShortestPath(board, enemyPos, getTargetRow(3 - playerId, size));
+        int score = (enemyDist - myDist) * 50;
 
-        int score = (enemyDist - myDist) * 100;
-
-        int myMoves = board.getAvailableMoves(myPos).size();
-        int enemyMoves = board.getAvailableMoves(enemyPos).size();
-        score += (myMoves - enemyMoves) * 10;
+        score += board.getAvailableMoves(getCurrentPosition(board, playerId)).size() * 3;
 
         score += (wallsLeft1 - wallsLeft2) * 15;
-
-        int col = myPos.charAt(1) - '0';
-        score -= Math.abs(col - size / 2) * 5;
 
         return score;
     }
