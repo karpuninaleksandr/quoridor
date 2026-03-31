@@ -38,12 +38,12 @@ public class MinimaxAlgorithm implements Algorithm {
         return best;
     }
 
-    private Move search(Board board, int depth, int playerId, int size, int w1, int w2, long endTime) {
-        List<Move> moves = getMoves(board, playerId, w1);
+    private Move search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
+        List<Move> moves = getMoves(board, playerId, wallsLeft1);
 
         moves.sort((a, b) -> Integer.compare(
-                evaluateMove(board, b, playerId, size, w1, w2),
-                evaluateMove(board, a, playerId, size, w1, w2)
+                evaluateMove(board, b, playerId, size, wallsLeft1, wallsLeft2),
+                evaluateMove(board, a, playerId, size, wallsLeft1, wallsLeft2)
         ));
 
         Move bestMove = null;
@@ -55,14 +55,16 @@ public class MinimaxAlgorithm implements Algorithm {
             Board copy = board.copy();
             applyMove(copy, move);
 
-            int nw1 = w1, nw2 = w2;
+            int newWallsLeft1 = wallsLeft1, newWallsLeft2 = wallsLeft2;
             if (move.getMoveType() == MoveType.PLACE_WALL) {
-                if (playerId == 1) nw1--;
-                else nw2--;
+                if (playerId == 1) {
+                    --newWallsLeft1;
+                }
+                else --newWallsLeft2;
             }
 
-            int value = minimax(copy, depth - 1, false, playerId, size, nw1, nw2, Integer.MIN_VALUE,
-                    Integer.MAX_VALUE, endTime);
+            int value = minimax(copy, depth - 1, false, playerId, size, newWallsLeft1, newWallsLeft2,
+                    Integer.MIN_VALUE, Integer.MAX_VALUE, endTime);
 
             if (value > bestValue) {
                 bestValue = value;
@@ -73,7 +75,7 @@ public class MinimaxAlgorithm implements Algorithm {
         return bestMove;
     }
 
-    private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int w1, int w2, int alpha,
+    private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2, int alpha,
                         int beta, long endTime) {
         checkTime(endTime);
 
@@ -81,13 +83,13 @@ public class MinimaxAlgorithm implements Algorithm {
         if (cache.containsKey(key)) return cache.get(key);
 
         if (depth == 0) {
-            int val = evaluate(board, playerId, size, w1, w2);
+            int val = evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
             cache.put(key, val);
             return val;
         }
 
         int current = maximizing ? playerId : (3 - playerId);
-        int walls = current == 1 ? w1 : w2;
+        int walls = current == 1 ? wallsLeft1 : wallsLeft2;
 
         List<Move> moves = getMoves(board, current, walls);
 
@@ -102,13 +104,15 @@ public class MinimaxAlgorithm implements Algorithm {
             Board copy = board.copy();
             applyMove(copy, move);
 
-            int nw1 = w1, nw2 = w2;
+            int newWallsLeft1 = wallsLeft1, newWallsLeft2 = wallsLeft2;
             if (move.getMoveType() == MoveType.PLACE_WALL) {
-                if (current == 1) nw1--;
-                else nw2--;
+                if (current == 1) {
+                    --newWallsLeft1;
+                }
+                else --newWallsLeft2;
             }
 
-            int val = minimax(copy, depth - 1, !maximizing, playerId, size, nw1, nw2, alpha, beta, endTime);
+            int val = minimax(copy, depth - 1, !maximizing, playerId, size, newWallsLeft1, newWallsLeft2, alpha, beta, endTime);
 
             if (maximizing) {
                 if (val > best) {
@@ -131,10 +135,10 @@ public class MinimaxAlgorithm implements Algorithm {
         return best;
     }
 
-    private int evaluateMove(Board board, Move move, int playerId, int size, int w1, int w2) {
+    private int evaluateMove(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         Board copy = board.copy();
         applyMove(copy, move);
-        return evaluate(copy, playerId, size, w1, w2);
+        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2);
     }
 
     private void checkTime(long endTime) {

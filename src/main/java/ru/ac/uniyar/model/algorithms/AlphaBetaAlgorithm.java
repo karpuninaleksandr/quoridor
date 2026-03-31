@@ -29,7 +29,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
 
         Move bestMove = null;
         for (int depth = 1; depth <= maxDepth; ++depth) {
-            if (System.currentTimeMillis() > endTime) break;
+            if (System.currentTimeMillis() > endTime) {
+                break;
+            }
 
             Move move = search(board, depth, playerId, size, wallsLeft, wallsLeft, endTime);
             if (move != null) {
@@ -40,27 +42,31 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return bestMove;
     }
 
-    private Move search(Board board, int depth, int playerId, int size, int w1, int w2, long endTime) {
-        List<Move> moves = getMoves(board, playerId, w1);
-        orderMoves(moves, board, playerId, size, w1, w2, 0);
+    private Move search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
+        List<Move> moves = getMoves(board, playerId, wallsLeft1);
+        orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0);
 
         Move bestMove = null;
         int best = Integer.MIN_VALUE;
 
         for (Move move : moves) {
-            if (System.currentTimeMillis() > endTime) break;
+            if (System.currentTimeMillis() > endTime) {
+                break;
+            }
 
             Board copy = board.copy();
             applyMove(copy, move);
 
-            int nw1 = w1, nw2 = w2;
+            int newWallsLeft1 = wallsLeft1, newWallsLeft2 = wallsLeft2;
             if (move.getMoveType() == MoveType.PLACE_WALL) {
-                if (playerId == 1) nw1--;
-                else nw2--;
+                if (playerId == 1) {
+                    --newWallsLeft1;
+                }
+                else --newWallsLeft2;
             }
 
             int val = alphaBeta(copy, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false, playerId, size,
-                    nw1, nw2, endTime, 1);
+                    newWallsLeft1, newWallsLeft2, endTime, 1);
 
             if (val > best) {
                 best = val;
@@ -71,25 +77,25 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return bestMove;
     }
 
-    private int alphaBeta(Board board, int depth, int alpha, int beta, boolean max, int playerId, int size, int w1,
-                          int w2, long endTime, int ply) {
+    private int alphaBeta(Board board, int depth, int alpha, int beta, boolean max, int playerId, int size, int wallsLeft1,
+                          int wallsLeft2, long endTime, int ply) {
         if (System.currentTimeMillis() > endTime) return 0;
 
-        String key = board.toString() + depth + w1 + w2;
+        String key = board.toString() + depth + wallsLeft1 + wallsLeft2;
         Integer cached = transposition.get(key);
         if (cached != null) return cached;
 
         if (depth == 0) {
-            int eval = evaluatePro(board, playerId, size, w1, w2);
+            int eval = evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
             transposition.put(key, eval);
             return eval;
         }
 
         int current = max ? playerId : 3 - playerId;
-        int walls = current == 1 ? w1 : w2;
+        int walls = current == 1 ? wallsLeft1 : wallsLeft2;
 
         List<Move> moves = getMoves(board, current, walls);
-        orderMoves(moves, board, playerId, size, w1, w2, ply);
+        orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, ply);
 
         int best = max ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
@@ -97,14 +103,16 @@ public class AlphaBetaAlgorithm implements Algorithm {
             Board copy = board.copy();
             applyMove(copy, move);
 
-            int nw1 = w1, nw2 = w2;
+            int newWallsLeft1 = wallsLeft1, newWallsLeft2 = wallsLeft2;
             if (move.getMoveType() == MoveType.PLACE_WALL) {
-                if (current == 1) nw1--;
-                else nw2--;
+                if (current == 1) {
+                    --newWallsLeft1;
+                }
+                else --newWallsLeft2;
             }
 
-            int val = alphaBeta(copy, depth - 1, alpha, beta,
-                    !max, playerId, size, nw1, nw2, endTime, ply + 1);
+            int val = alphaBeta(copy, depth - 1, alpha, beta, !max, playerId, size, newWallsLeft1, newWallsLeft2,
+                    endTime, ply + 1);
 
             if (max) {
                 if (val > best) best = val;
@@ -125,25 +133,29 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return best;
     }
 
-    private void orderMoves(List<Move> moves, Board board, int playerId, int size, int w1, int w2, int ply) {
+    private void orderMoves(List<Move> moves, Board board, int playerId, int size, int wallsLeft1, int wallsLeft2, int ply) {
         moves.sort((a, b) -> {
-            int scoreA = scoreMove(a, board, playerId, size, w1, w2, ply);
-            int scoreB = scoreMove(b, board, playerId, size, w1, w2, ply);
+            int scoreA = scoreMove(a, board, playerId, size, wallsLeft1, wallsLeft2, ply);
+            int scoreB = scoreMove(b, board, playerId, size, wallsLeft1, wallsLeft2, ply);
             return Integer.compare(scoreB, scoreA);
         });
     }
 
-    private int scoreMove(Move move, Board board, int playerId, int size, int w1, int w2, int ply) {
+    private int scoreMove(Move move, Board board, int playerId, int size, int wallsLeft1, int wallsLeft2, int ply) {
         int score = 0;
 
-        if (move.equals(bestMovesInHistory[ply][0])) score += 10000;
-        if (move.equals(bestMovesInHistory[ply][1])) score += 8000;
+        if (move.equals(bestMovesInHistory[ply][0])) {
+            score += 10000;
+        }
+        if (move.equals(bestMovesInHistory[ply][1])) {
+            score += 8000;
+        }
 
         score += history.getOrDefault(move.toString(), 0);
 
         Board copy = board.copy();
         applyMove(copy, move);
-        score += evaluatePro(copy, playerId, size, w1, w2);
+        score += evaluate(copy, playerId, size, wallsLeft1, wallsLeft2);
 
         return score;
     }
@@ -154,32 +166,6 @@ public class AlphaBetaAlgorithm implements Algorithm {
     }
 
     private void updateHistory(Move move, int depth) {
-        history.put(move.toString(),
-                history.getOrDefault(move.toString(), 0) + depth * depth);
-    }
-
-    private int evaluatePro(Board board, int playerId, int size, int w1, int w2) {
-
-        int myDist = calculateShortestPath(board,
-                getCurrentPosition(board, playerId),
-                getTargetRow(playerId, size));
-
-        int enemyDist = calculateShortestPath(board,
-                getCurrentPosition(board, 3 - playerId),
-                getTargetRow(3 - playerId, size));
-
-        int score = (enemyDist - myDist) * 30;
-
-        int mobility = board.getAvailableMoves(getCurrentPosition(board, playerId)).size();
-        score += mobility * 3;
-
-        int wallsDiff = w1 - w2;
-        score += wallsDiff * 5;
-
-        // центр
-        int j = getCurrentPosition(board, playerId).charAt(1) - '0';
-        score -= Math.abs(j - size / 2) * 2;
-
-        return score;
+        history.put(move.toString(), history.getOrDefault(move.toString(), 0) + depth * depth);
     }
 }
