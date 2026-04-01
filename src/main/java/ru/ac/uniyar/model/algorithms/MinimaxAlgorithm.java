@@ -74,7 +74,9 @@ public class MinimaxAlgorithm implements Algorithm {
                 if (playerId == 1) {
                     --newWallsLeft1;
                 }
-                else --newWallsLeft2;
+                else {
+                    --newWallsLeft2;
+                }
             }
 
             int value = minimax(copy, depth - 1, false, playerId, size, newWallsLeft1, newWallsLeft2, endTime);
@@ -87,8 +89,8 @@ public class MinimaxAlgorithm implements Algorithm {
     }
 
     /**
-     * если max = true (наш ход) - максимизируем оценку - результат в alpha (нижней границе)
-     * если max = false (ход противника) - минимизируем - результат в beta (верхней границе)
+     * если max = true (наш ход) - максимизируем оценку
+     * если max = false (ход противника) - минимизируем
      */
     private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
         if (System.currentTimeMillis() > endTime) {

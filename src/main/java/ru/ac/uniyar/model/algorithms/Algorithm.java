@@ -95,7 +95,6 @@ public interface Algorithm {
         visited.add(start);
 
         String end = null;
-
         while (!queue.isEmpty()) {
             String curr = queue.poll();
             int i = curr.charAt(0) - '0';
@@ -114,12 +113,10 @@ public interface Algorithm {
         }
 
         List<String> path = new ArrayList<>();
-
         while (end != null) {
             path.add(end);
             end = parent.get(end);
         }
-
         return path;
     }
 

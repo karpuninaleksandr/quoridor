@@ -20,8 +20,8 @@ public class MonteCarloAlgorithm implements Algorithm {
     }
 
     /**
-     * идем узлам дерева:
-     * добавлаем детей узлу
+     * идем по узлам дерева:
+     * добавляем детей узлу
      * играем случайную партию
      * обновляем статистику входов в узел и побед из него
      */
@@ -202,8 +202,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         int player;
         int walls1, walls2;
 
-        Node(Board board, Node parent, Move move,
-             int player, int w1, int w2) {
+        Node(Board board, Node parent, Move move, int player, int w1, int w2) {
             this.board = board;
             this.parent = parent;
             this.move = move;
