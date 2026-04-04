@@ -30,9 +30,9 @@ public class MinimaxAlgorithm implements Algorithm {
         int size = (int) Math.sqrt(board.getTiles().size());
         long endTime = System.currentTimeMillis() + getTimeLimit(hardnessLevel, size);
         int maxDepth = switch (hardnessLevel) {
-            case EASY -> 3 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case MEDIUM -> 5 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case HARD -> 7 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case EASY -> 4 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case MEDIUM -> 6 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case HARD -> 8 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
         };
 
         Move best = null;

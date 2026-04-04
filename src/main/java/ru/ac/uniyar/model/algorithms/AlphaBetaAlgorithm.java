@@ -32,8 +32,8 @@ public class AlphaBetaAlgorithm implements Algorithm {
     public Move getMove(Board board, ComputerPlayerHardnessLevel level, int playerId, int wallsLeft) {
         int size = (int) Math.sqrt(board.getTiles().size());
         int maxDepth = switch (level) {
-            case EASY -> 4 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case MEDIUM -> 7 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case EASY -> 7 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case MEDIUM -> 9 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
             case HARD -> 12 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
         };
         long endTime = System.currentTimeMillis() + getTimeLimit(level, size);
