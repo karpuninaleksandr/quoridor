@@ -29,9 +29,17 @@ public interface Algorithm {
         Set<String> used = new HashSet<>();
         List<String> enemyPath = getShortestPathCells(board, getCurrentPosition(board, 3 - playerId),
                 getTargetRow(3 - playerId, size));
-        enemyPath = enemyPath.subList(0, Math.min(8, enemyPath.size()));
+        List<String> myPath = getShortestPathCells(board, getCurrentPosition(board, playerId),
+                getTargetRow(playerId, size));
+        List<String> candidateCells = new ArrayList<>();
+        candidateCells.addAll(enemyPath.subList(0, Math.min(10, enemyPath.size())));
+        candidateCells.addAll(myPath.subList(0, Math.min(6, myPath.size())));
+        addNeighborhood(candidateCells, getCurrentPosition(board, 3 - playerId), size);
 
-        for (String cell : enemyPath) {
+        int beforeEnemy = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
+        int beforeMine = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
+
+        for (String cell : candidateCells) {
             int i = cell.charAt(0) - '0';
             int j = cell.charAt(1) - '0';
 
@@ -41,14 +49,7 @@ public interface Algorithm {
                 String wallKey = start + "-" + end;
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
-                    Board copy = board.copy();
-                    int before = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
-
-                    copy.placeWall(start, end);
-
-                    int after = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
-
-                    if (after > before) {
+                    if (isStrategicWall(board, start, end, playerId, size, beforeEnemy, beforeMine)) {
                         moves.add(Move.placeWall(playerId, start, end));
                     }
                 }
@@ -60,20 +61,39 @@ public interface Algorithm {
                 String wallKey = start + "-" + end;
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
-                    Board copy = board.copy();
-                    int before = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
-
-                    copy.placeWall(start, end);
-
-                    int after = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
-
-                    if (after > before) {
+                    if (isStrategicWall(board, start, end, playerId, size, beforeEnemy, beforeMine)) {
                         moves.add(Move.placeWall(playerId, start, end));
                     }
                 }
             }
         }
         return moves;
+    }
+
+    default void addNeighborhood(List<String> cells, String center, int size) {
+        int row = center.charAt(0) - '0';
+        int col = center.charAt(1) - '0';
+
+        for (int di = -2; di <= 2; ++di) {
+            for (int dj = -2; dj <= 2; ++dj) {
+                int nextRow = row + di;
+                int nextCol = col + dj;
+                if (nextRow >= 0 && nextCol >= 0 && nextRow < size && nextCol < size) {
+                    cells.add(nextRow + "" + nextCol);
+                }
+            }
+        }
+    }
+
+    default boolean isStrategicWall(Board board, String start, String end, int playerId, int size,
+                                    int beforeEnemy, int beforeMine) {
+        Board copy = board.copy();
+        copy.placeWall(start, end);
+
+        int afterEnemy = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
+        int afterMine = calculateShortestPath(copy, getCurrentPosition(copy, playerId), getTargetRow(playerId, size));
+
+        return afterEnemy > beforeEnemy || afterEnemy - beforeEnemy >= afterMine - beforeMine;
     }
 
     default boolean isWallPlaceable(Board board, String start, String end) {
@@ -184,8 +204,14 @@ public interface Algorithm {
         int score = (enemyDist - myDist) * 50;
 
         score += board.getAvailableMoves(getCurrentPosition(board, playerId)).size() * 3;
+        score -= board.getAvailableMoves(getCurrentPosition(board, 3 - playerId)).size() * 2;
 
         score += (wallsLeft1 - wallsLeft2) * 15;
+
+        int myRow = getCurrentPosition(board, playerId).charAt(0) - '0';
+        int enemyRow = getCurrentPosition(board, 3 - playerId).charAt(0) - '0';
+        score += playerId == 1 ? (size - 1 - myRow) * 4 : myRow * 4;
+        score -= playerId == 1 ? enemyRow * 4 : (size - 1 - enemyRow) * 4;
 
         return score;
     }
@@ -218,10 +244,28 @@ public interface Algorithm {
     }
 
     default long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
+        int multiplier = Math.max(1, size / GameSize.NORMAL.getAmountOfTilesPerSide());
         return switch (level) {
-            case EASY -> 2000L * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case MEDIUM -> 3500L * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case HARD -> 5000L * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case EASY -> 700L * multiplier;
+            case MEDIUM -> 1600L * multiplier;
+            case HARD -> 2800L * multiplier;
         };
+    }
+
+    default String boardKey(Board board) {
+        StringBuilder key = new StringBuilder();
+        key.append(board.getPositionOfPlayer1()).append('|').append(board.getPositionOfPlayer2()).append('|');
+
+        board.getTiles().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    key.append(entry.getKey());
+                    key.append(entry.getValue().isLeftMovementAvailable() ? '1' : '0');
+                    key.append(entry.getValue().isForwardMovementAvailable() ? '1' : '0');
+                    key.append(entry.getValue().isRightMovementAvailable() ? '1' : '0');
+                    key.append(entry.getValue().isBackwardsMovementAvailable() ? '1' : '0');
+                });
+
+        return key.toString();
     }
 }

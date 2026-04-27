@@ -11,10 +11,6 @@ public class MinimaxAlgorithm implements Algorithm {
      * уже посчитанные ранее позиции
      */
     private final Map<String, Integer> cache = new HashMap<>();
-    /**
-     * хорошие ходы на определённой глубине, которые ранее давали лучший результат
-     */
-    private final Map<Integer, Move> bestMoves = new HashMap<>();
 
     @Override
     public ComputerAlgorithmType getType() {
@@ -24,40 +20,40 @@ public class MinimaxAlgorithm implements Algorithm {
     /**
      * пока есть время, итеративно увеличиваем глубину поиска решения
      * если время кончилось -> отдаем лучшее, что нашли
+     * MiniMax оставлен как честный перебор без сортировки и отсечений
      */
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft) {
         int size = (int) Math.sqrt(board.getTiles().size());
         long endTime = System.currentTimeMillis() + getTimeLimit(hardnessLevel, size);
         int maxDepth = switch (hardnessLevel) {
-            case EASY -> 4 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case MEDIUM -> 6 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case HARD -> 8 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case EASY -> 2;
+            case MEDIUM -> 3;
+            case HARD -> 4;
         };
+
+        cache.clear();
 
         Move best = null;
         for (int depth = 1; depth <= maxDepth; depth++) {
             if (System.currentTimeMillis() > endTime) {
                 break;
             }
-            best = search(board, depth, playerId, size, wallsLeft, wallsLeft, endTime);
+            Move move = search(board, depth, playerId, size, wallsLeft, wallsLeft, endTime);
+            if (move != null) {
+                best = move;
+            }
         }
         return best;
     }
 
     /**
-     * генерируем всевозможные ходы, сортируем и отбираем из них топ 20
+     * генерируем всевозможные ходы, отбираем из них ограниченное количество
      * потом прогоняем через minimax функцию оценки
      */
-    private Move search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
-        List<Move> moves = getMoves(board, playerId, wallsLeft1);
-        moves.sort((a, b) -> Integer.compare(
-                evaluateMove(board, b, playerId, size, wallsLeft1, wallsLeft2),
-                evaluateMove(board, a, playerId, size, wallsLeft1, wallsLeft2)
-        ));
-        if (moves.size() > 20) {
-            moves = moves.subList(0, 20);
-        }
+    private Move search(Board board, int depth, int playerId, int size,
+                        int wallsLeft1, int wallsLeft2, long endTime) {
+        List<Move> moves = limitMoves(getMoves(board, playerId, wallsLeft1));
 
         Move bestMove = null;
         int bestValue = Integer.MIN_VALUE;
@@ -73,13 +69,13 @@ public class MinimaxAlgorithm implements Algorithm {
             if (move.getMoveType() == MoveType.PLACE_WALL) {
                 if (playerId == 1) {
                     --newWallsLeft1;
-                }
-                else {
+                } else {
                     --newWallsLeft2;
                 }
             }
 
-            int value = minimax(copy, depth - 1, false, playerId, size, newWallsLeft1, newWallsLeft2, endTime);
+            int value = minimax(copy, depth - 1, false,
+                    playerId, size, newWallsLeft1, newWallsLeft2, endTime);
             if (value > bestValue) {
                 bestValue = value;
                 bestMove = move;
@@ -92,11 +88,13 @@ public class MinimaxAlgorithm implements Algorithm {
      * если max = true (наш ход) - максимизируем оценку
      * если max = false (ход противника) - минимизируем
      */
-    private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
+    private int minimax(Board board, int depth, boolean maximizing,
+                        int playerId, int size,
+                        int wallsLeft1, int wallsLeft2, long endTime) {
         if (System.currentTimeMillis() > endTime) {
             return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
         }
-        String key = board.hashCode() + "|" + depth + "|" + maximizing;
+        String key = boardKey(board) + "|" + depth + "|" + maximizing + "|" + wallsLeft1 + "|" + wallsLeft2;
         if (cache.containsKey(key)) {
             return cache.get(key);
         }
@@ -109,12 +107,7 @@ public class MinimaxAlgorithm implements Algorithm {
 
         int current = maximizing ? playerId : (3 - playerId);
         int walls = current == 1 ? wallsLeft1 : wallsLeft2;
-        List<Move> moves = getMoves(board, current, walls);
-
-        Move nestMove = bestMoves.get(depth);
-        if (nestMove != null && moves.remove(nestMove)) {
-            moves.add(0, nestMove);
-        }
+        List<Move> moves = limitMoves(getMoves(board, current, walls));
 
         int best = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
         for (Move move : moves) {
@@ -130,17 +123,12 @@ public class MinimaxAlgorithm implements Algorithm {
                 }
             }
 
-            int val = minimax(copy, depth - 1, !maximizing, playerId, size, newWallsLeft1, newWallsLeft2, endTime);
+            int val = minimax(copy, depth - 1, !maximizing,
+                    playerId, size, newWallsLeft1, newWallsLeft2, endTime);
             if (maximizing) {
-                if (val > best) {
-                    best = val;
-                    bestMoves.put(depth, move);
-                }
+                best = Math.max(best, val);
             } else {
-                if (val < best) {
-                    best = val;
-                    bestMoves.put(depth, move);
-                }
+                best = Math.min(best, val);
             }
         }
         cache.put(key, best);
@@ -148,11 +136,12 @@ public class MinimaxAlgorithm implements Algorithm {
     }
 
     /**
-     * оценка одного хода для сортировки ходов
+     * ограничение ширины перебора, чтобы обычный MiniMax не зависал на большом поле
      */
-    private int evaluateMove(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
-        Board copy = board.copy();
-        applyMove(copy, move);
-        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2);
+    private List<Move> limitMoves(List<Move> moves) {
+        if (moves.size() <= 16) {
+            return moves;
+        }
+        return moves.subList(0, 16);
     }
 }

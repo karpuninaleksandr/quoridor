@@ -1,9 +1,11 @@
 package ru.ac.uniyar.model;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import ru.ac.uniyar.model.enums.MoveType;
 
 //класс, описывающий ход игрока
@@ -11,6 +13,8 @@ import ru.ac.uniyar.model.enums.MoveType;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode
+@ToString
 public class Move {
     private MoveType moveType;
     private int playerId;

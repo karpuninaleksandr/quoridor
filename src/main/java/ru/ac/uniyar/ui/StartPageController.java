@@ -46,6 +46,14 @@ public class StartPageController extends VerticalLayout {
                 Notification.show("Выберите размер поля");
                 return;
             }
+            if (player1.getValue() == null || player2.getValue() == null) {
+                Notification.show("Выберите обоих игроков");
+                return;
+            }
+            if (hardness.getValue() == null) {
+                Notification.show("Выберите сложность ИИ");
+                return;
+            }
 
             gameProcessor.startNewGame(size, player1.getValue(), player2.getValue(), hardness.getValue());
             getUI().ifPresent(ui -> ui.navigate("/game"));

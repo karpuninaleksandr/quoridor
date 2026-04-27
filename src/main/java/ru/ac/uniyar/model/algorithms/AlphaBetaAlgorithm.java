@@ -27,16 +27,20 @@ public class AlphaBetaAlgorithm implements Algorithm {
     /**
      * пока есть время, итеративно увеличиваем глубину поиска решения
      * если время кончилось -> отдаем лучшее, что нашли
+     * AlphaBeta ищет глубже MiniMax за счет сортировки ходов и отсечений
      */
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel level, int playerId, int wallsLeft) {
         int size = (int) Math.sqrt(board.getTiles().size());
+        int multiplier = Math.max(1, size / GameSize.NORMAL.getAmountOfTilesPerSide());
         int maxDepth = switch (level) {
-            case EASY -> 7 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case MEDIUM -> 9 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case HARD -> 12 * (size / GameSize.NORMAL.getAmountOfTilesPerSide());
+            case EASY -> 4 * multiplier;
+            case MEDIUM -> 6 * multiplier;
+            case HARD -> 8 * multiplier;
         };
         long endTime = System.currentTimeMillis() + getTimeLimit(level, size);
+
+        cache.clear();
 
         Move bestMove = null;
         for (int depth = 1; depth <= maxDepth; ++depth) {
@@ -52,14 +56,15 @@ public class AlphaBetaAlgorithm implements Algorithm {
     }
 
     /**
-     * генерируем всевозможные ходы, сортируем и отбираем из них топ 20
+     * генерируем всевозможные ходы, сортируем и отбираем из них топ кандидатов
      * потом прогоняем через alpha-beta функцию оценки
      */
-    private Move search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
+    private Move search(Board board, int depth, int playerId, int size,
+                        int wallsLeft1, int wallsLeft2, long endTime) {
         List<Move> moves = getMoves(board, playerId, wallsLeft1);
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0);
-        if (moves.size() > 20) {
-            moves = moves.subList(0, 20);
+        if (moves.size() > 36) {
+            moves = moves.subList(0, 36);
         }
 
         Move bestMove = null;
@@ -75,13 +80,12 @@ public class AlphaBetaAlgorithm implements Algorithm {
             if (move.getMoveType() == MoveType.PLACE_WALL) {
                 if (playerId == 1) {
                     --newWallsLeft1;
-                }
-                else {
+                } else {
                     --newWallsLeft2;
                 }
             }
-            int val = alphaBeta(copy, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false, playerId, size,
-                    newWallsLeft1, newWallsLeft2, endTime, 1);
+            int val = alphaBeta(copy, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false,
+                    playerId, size, newWallsLeft1, newWallsLeft2, endTime, 1);
             if (val > best) {
                 best = val;
                 bestMove = move;
@@ -95,11 +99,13 @@ public class AlphaBetaAlgorithm implements Algorithm {
      * если max = false (ход противника) - минимизируем - результат в beta (верхней границе)
      * если beta <= alpha -> можно не исследовать дальше, отсечение
      */
-    private int alphaBeta(Board board, int depth, int alpha, int beta, boolean max, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime, int ply) {
+    private int alphaBeta(Board board, int depth, int alpha, int beta, boolean max,
+                          int playerId, int size, int wallsLeft1, int wallsLeft2,
+                          long endTime, int ply) {
         if (System.currentTimeMillis() > endTime) {
             return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
         }
-        String key = board.hashCode() + "|" + depth + "|" + max + "|" + wallsLeft1 + "|" + wallsLeft2;
+        String key = boardKey(board) + "|" + depth + "|" + max + "|" + wallsLeft1 + "|" + wallsLeft2;
         Integer cached = cache.get(key);
         if (cached != null) {
             return cached;
@@ -116,8 +122,8 @@ public class AlphaBetaAlgorithm implements Algorithm {
 
         List<Move> moves = getMoves(board, current, walls);
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, ply);
-        if (moves.size() > 20) {
-            moves = moves.subList(0, 20);
+        if (moves.size() > 36) {
+            moves = moves.subList(0, 36);
         }
 
         int best = max ? Integer.MIN_VALUE : Integer.MAX_VALUE;
@@ -130,30 +136,25 @@ public class AlphaBetaAlgorithm implements Algorithm {
             if (move.getMoveType() == MoveType.PLACE_WALL) {
                 if (current == 1) {
                     --newWallsLeft1;
-                }
-                else {
+                } else {
                     --newWallsLeft2;
                 }
             }
 
-            int val = alphaBeta(copy, depth - 1, alpha, beta, !max, playerId, size, newWallsLeft1, newWallsLeft2,
-                    endTime, ply + 1);
+            int val = alphaBeta(copy, depth - 1, alpha, beta, !max,
+                    playerId, size, newWallsLeft1, newWallsLeft2, endTime, ply + 1);
 
             if (max) {
-                if (val > best) {
-                    best = val;
-                }
+                best = Math.max(best, val);
                 alpha = Math.max(alpha, val);
             } else {
-                if (val < best) {
-                    best = val;
-                }
+                best = Math.min(best, val);
                 beta = Math.min(beta, val);
             }
 
             if (beta <= alpha) {
                 updateBestMoves(move, ply);
-                updateGoodMoves(move, depth);
+                updateGoodMoves(move);
                 break;
             }
         }
@@ -165,26 +166,29 @@ public class AlphaBetaAlgorithm implements Algorithm {
     /**
      * сортируем ходы
      */
-    private void orderMoves(List<Move> moves, Board board, int playerId, int size, int wallsLeft1, int wallsLeft2, int ply) {
-        moves.sort((a, b) -> {
-            int scoreA = scoreMove(a, board, playerId, size, wallsLeft1, wallsLeft2, ply);
-            int scoreB = scoreMove(b, board, playerId, size, wallsLeft1, wallsLeft2, ply);
-            return Integer.compare(scoreB, scoreA);
-        });
+    private void orderMoves(List<Move> moves, Board board, int playerId, int size,
+                            int wallsLeft1, int wallsLeft2, int ply) {
+        moves.sort((a, b) -> Integer.compare(
+                scoreMove(b, board, playerId, size, wallsLeft1, wallsLeft2, ply),
+                scoreMove(a, board, playerId, size, wallsLeft1, wallsLeft2, ply)
+        ));
     }
 
     /**
      * оцениваем ход для корректной сортировки с помощью функции evaluate из класса Algorithm
      * будет плюсом наличие этого хода в истории хороших или лучших ходов
      */
-    private int scoreMove(Move move, Board board, int playerId, int size, int wallsLeft1, int wallsLeft2, int ply) {
+    private int scoreMove(Move move, Board board, int playerId, int size,
+                          int wallsLeft1, int wallsLeft2, int ply) {
         int score = 0;
 
-        if (bestMoves[ply][0] != null && move.equals(bestMoves[ply][0])) {
-            score += 10000;
-        }
-        if (bestMoves[ply][1] != null && move.equals(bestMoves[ply][1])) {
-            score += 8000;
+        if (ply < bestMoves.length) {
+            if (bestMoves[ply][0] != null && move.equals(bestMoves[ply][0])) {
+                score += 10000;
+            }
+            if (bestMoves[ply][1] != null && move.equals(bestMoves[ply][1])) {
+                score += 8000;
+            }
         }
 
         score += goodMoves.getOrDefault(move.toString(), 0) * 2;
@@ -200,14 +204,17 @@ public class AlphaBetaAlgorithm implements Algorithm {
      * сохраняем лучший ход
      */
     private void updateBestMoves(Move move, int ply) {
+        if (ply >= bestMoves.length || move.equals(bestMoves[ply][0])) {
+            return;
+        }
         bestMoves[ply][1] = bestMoves[ply][0];
         bestMoves[ply][0] = move;
     }
 
     /**
-     * добавляем хороший ход в историю с учетом глубины анализа
+     * добавляем хороший ход в историю
      */
-    private void updateGoodMoves(Move move, int depth) {
-        goodMoves.put(move.toString(), goodMoves.getOrDefault(move.toString(), 0) + depth * depth);
+    private void updateGoodMoves(Move move) {
+        goodMoves.merge(move.toString(), 1, Integer::sum);
     }
 }

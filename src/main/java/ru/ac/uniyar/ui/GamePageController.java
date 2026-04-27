@@ -25,16 +25,30 @@ public class GamePageController extends VerticalLayout {
     private final Div boardGrid = new Div();
     private final H1 turnLabel = new H1();
     private final H1 wallsLabel = new H1();
+    private final Button aiStepButton = new Button("Сделать ход ИИ");
 
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
 
         Button restartButton = new Button("Начать сначала");
         restartButton.addClickListener(e -> UI.getCurrent().navigate("start"));
+        aiStepButton.addClickListener(e -> {
+            if (gameProcessor.getGame() == null || gameProcessor.getGame().isFinished()) {
+                return;
+            }
+            if (gameProcessor.getCurrentPlayer() instanceof HumanPlayer) {
+                Notification.show("Сейчас ход человека", 1000, Notification.Position.MIDDLE);
+                return;
+            }
+            makeComputerMove();
+            renderBoard();
+            processTurn();
+        });
 
         add(new H1("Игра"));
         add(turnLabel);
         add(wallsLabel);
+        add(aiStepButton);
         add(boardGrid);
         add(restartButton);
     }
@@ -58,6 +72,7 @@ public class GamePageController extends VerticalLayout {
         Player p2 = game.getPlayer2();
 
         wallsLabel.setText("Стены: P1=" + p1.getAmountOfWallsLeft() + " | P2=" + p2.getAmountOfWallsLeft());
+        updateAiStepButton();
 
         Board board = game.getBoard();
         int size = game.getGameSize().getAmountOfTilesPerSide();
@@ -268,22 +283,44 @@ public class GamePageController extends VerticalLayout {
 
         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) {
 
-            Move move = gameProcessor.getCurrentPlayer().getMove(
-                    game.getBoard(),
-                    gameProcessor.getCurrentPlayer().getPlayerId(),
-                    gameProcessor.getCurrentPlayer().getAmountOfWallsLeft()
-            );
-
-            if (move != null) {
-                gameProcessor.makeMove(move);
+            if (isAiVsAi(game)) {
+                updateAiStepButton();
+                return;
             }
 
-            if (ui != null && ui.isAttached()) {
-                ui.access(() -> {
-                    renderBoard();
-                    processTurn();
-                });
-            }
+            makeComputerMove();
+            renderBoard();
+            processTurn();
         }
+    }
+
+    private void makeComputerMove() {
+        Game game = gameProcessor.getGame();
+        Player currentPlayer = gameProcessor.getCurrentPlayer();
+
+        Move move = currentPlayer.getMove(
+                game.getBoard(),
+                currentPlayer.getPlayerId(),
+                currentPlayer.getAmountOfWallsLeft()
+        );
+
+        if (move != null) {
+            gameProcessor.makeMove(move);
+        }
+    }
+
+    private void updateAiStepButton() {
+        Game game = gameProcessor.getGame();
+        boolean visible = game != null && !game.isFinished()
+                && isAiVsAi(game)
+                && !(gameProcessor.getCurrentPlayer() instanceof HumanPlayer);
+        aiStepButton.setVisible(visible);
+        if (visible) {
+            aiStepButton.setText("Сделать ход ИИ: P" + gameProcessor.getCurrentPlayer().getPlayerId());
+        }
+    }
+
+    private boolean isAiVsAi(Game game) {
+        return !(game.getPlayer1() instanceof HumanPlayer) && !(game.getPlayer2() instanceof HumanPlayer);
     }
 }
