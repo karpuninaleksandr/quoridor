@@ -4,6 +4,7 @@ import lombok.Setter;
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
 import ru.ac.uniyar.model.algorithms.Algorithm;
+import ru.ac.uniyar.model.algorithms.AlgorithmReport;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
 
 //реализация интерфейса Player для компьютера - методы будут ожидать выполнения его алгоритма
@@ -13,7 +14,11 @@ public class ComputerPlayer extends Player {
     private ComputerPlayerHardnessLevel hardnessLevel;
 
     @Override
-    public Move getMove(Board board, int playerId, int amountOfWallsLeft) {
-        return algorithm.getMove(board, hardnessLevel, playerId, amountOfWallsLeft);
+    public Move getMove(Board board, int playerId, int wallsLeft1, int wallsLeft2) {
+        return algorithm.getMove(board, hardnessLevel, playerId, wallsLeft1, wallsLeft2);
+    }
+
+    public AlgorithmReport getLastReport() {
+        return algorithm.getLastReport();
     }
 }

@@ -11,10 +11,18 @@ public class MinimaxAlgorithm implements Algorithm {
      * уже посчитанные ранее позиции
      */
     private final Map<String, Integer> cache = new HashMap<>();
+    private AlgorithmReport lastReport;
+    private long nodesVisited;
+    private long consideredMoves;
 
     @Override
     public ComputerAlgorithmType getType() {
         return ComputerAlgorithmType.MINIMAX;
+    }
+
+    @Override
+    public AlgorithmReport getLastReport() {
+        return lastReport;
     }
 
     /**
@@ -23,7 +31,7 @@ public class MinimaxAlgorithm implements Algorithm {
      * MiniMax оставлен как честный перебор без сортировки и отсечений
      */
     @Override
-    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft) {
+    public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
         int size = (int) Math.sqrt(board.getTiles().size());
         long endTime = System.currentTimeMillis() + getTimeLimit(hardnessLevel, size);
         int maxDepth = switch (hardnessLevel) {
@@ -33,17 +41,33 @@ public class MinimaxAlgorithm implements Algorithm {
         };
 
         cache.clear();
+        nodesVisited = 0;
+        consideredMoves = 0;
 
         Move best = null;
+        int bestScore = 0;
+        int reachedDepth = 0;
         for (int depth = 1; depth <= maxDepth; depth++) {
             if (System.currentTimeMillis() > endTime) {
                 break;
             }
-            Move move = search(board, depth, playerId, size, wallsLeft, wallsLeft, endTime);
-            if (move != null) {
-                best = move;
+            SearchResult result = search(board, depth, playerId, size, wallsLeft1, wallsLeft2, endTime);
+            if (result.move() != null) {
+                best = result.move();
+                bestScore = result.score();
+                reachedDepth = depth;
             }
         }
+        lastReport = new AlgorithmReport(
+                getType().getDescription(),
+                best,
+                bestScore,
+                reachedDepth,
+                nodesVisited,
+                consideredMoves,
+                0,
+                "MiniMax перебрал дерево без alpha-beta отсечений"
+        );
         return best;
     }
 
@@ -51,15 +75,16 @@ public class MinimaxAlgorithm implements Algorithm {
      * генерируем всевозможные ходы, отбираем из них ограниченное количество
      * потом прогоняем через minimax функцию оценки
      */
-    private Move search(Board board, int depth, int playerId, int size,
-                        int wallsLeft1, int wallsLeft2, long endTime) {
+    private SearchResult search(Board board, int depth, int playerId, int size,
+                                int wallsLeft1, int wallsLeft2, long endTime) {
         List<Move> moves = limitMoves(getMoves(board, playerId, wallsLeft1));
+        consideredMoves += moves.size();
 
         Move bestMove = null;
         int bestValue = Integer.MIN_VALUE;
         for (Move move : moves) {
             if (System.currentTimeMillis() > endTime) {
-                return bestMove;
+                return new SearchResult(bestMove, bestValue);
             }
 
             Board copy = board.copy();
@@ -81,7 +106,7 @@ public class MinimaxAlgorithm implements Algorithm {
                 bestMove = move;
             }
         }
-        return bestMove;
+        return new SearchResult(bestMove, bestValue);
     }
 
     /**
@@ -91,12 +116,19 @@ public class MinimaxAlgorithm implements Algorithm {
     private int minimax(Board board, int depth, boolean maximizing,
                         int playerId, int size,
                         int wallsLeft1, int wallsLeft2, long endTime) {
+        nodesVisited++;
         if (System.currentTimeMillis() > endTime) {
             return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
         }
         String key = boardKey(board) + "|" + depth + "|" + maximizing + "|" + wallsLeft1 + "|" + wallsLeft2;
         if (cache.containsKey(key)) {
             return cache.get(key);
+        }
+
+        Integer terminal = terminalScore(board, playerId, size, depth);
+        if (terminal != null) {
+            cache.put(key, terminal);
+            return terminal;
         }
 
         if (depth == 0) {
@@ -108,6 +140,7 @@ public class MinimaxAlgorithm implements Algorithm {
         int current = maximizing ? playerId : (3 - playerId);
         int walls = current == 1 ? wallsLeft1 : wallsLeft2;
         List<Move> moves = limitMoves(getMoves(board, current, walls));
+        consideredMoves += moves.size();
 
         int best = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
         for (Move move : moves) {
@@ -143,5 +176,8 @@ public class MinimaxAlgorithm implements Algorithm {
             return moves;
         }
         return moves.subList(0, 16);
+    }
+
+    private record SearchResult(Move move, int score) {
     }
 }

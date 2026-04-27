@@ -5,131 +5,149 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 
 @Getter
 @Setter
 @NoArgsConstructor
 public class Board {
-    private Map<String, BoardTile> tiles = new HashMap<>();
-    private String positionOfPlayer1;
-    private String positionOfPlayer2;
+    private Map<Position, BoardTile> tiles = new HashMap<>();
+    private Position positionOfPlayer1;
+    private Position positionOfPlayer2;
 
-    public void placeWall(String startPosition, String endPosition) {
-        int i1 = startPosition.charAt(0) - '0';
-        int j1 = startPosition.charAt(1) - '0';
+    public void placeWall(Position startPosition, Position endPosition) {
+        int i1 = startPosition.row();
+        int j1 = startPosition.col();
 
-        int i2 = endPosition.charAt(0) - '0';
-        int j2 = endPosition.charAt(1) - '0';
+        int i2 = endPosition.row();
+        int j2 = endPosition.col();
 
         if (i1 == i2 && Math.abs(j1 - j2) == 1) {
-            int j = Math.min(j1, j2);
-
-            BoardTile tl = tiles.get(i1 + "" + j);
-            BoardTile tr = tiles.get(i1 + "" + (j + 1));
-            BoardTile bl = tiles.get((i1 + 1) + "" + j);
-            BoardTile br = tiles.get((i1 + 1) + "" + (j + 1));
-
-            if (!tl.isBackwardsMovementAvailable() || !tr.isBackwardsMovementAvailable()) {
-                throw new RuntimeException("Wall overlap");
-            }
-
-            if (!tl.isRightMovementAvailable() && !bl.isRightMovementAvailable()) {
-                throw new RuntimeException("Wall crossing");
-            }
-
-            tl.setBackwardsMovementAvailable(false);
-            bl.setForwardMovementAvailable(false);
-
-            tr.setBackwardsMovementAvailable(false);
-            br.setForwardMovementAvailable(false);
+            placeHorizontalWall(i1, Math.min(j1, j2));
             return;
         }
 
         if (j1 == j2 && Math.abs(i1 - i2) == 1) {
-            int i = Math.min(i1, i2);
-
-            BoardTile tl = tiles.get(i + "" + j1);
-            BoardTile bl = tiles.get((i + 1) + "" + j1);
-            BoardTile tr = tiles.get(i + "" + (j1 + 1));
-            BoardTile br = tiles.get((i + 1) + "" + (j1 + 1));
-
-            if (!tl.isRightMovementAvailable() || !bl.isRightMovementAvailable()) {
-                throw new RuntimeException("Wall overlap");
-            }
-
-            if (!tl.isBackwardsMovementAvailable() && !tr.isBackwardsMovementAvailable()) {
-                throw new RuntimeException("Wall crossing");
-            }
-
-            tl.setRightMovementAvailable(false);
-            tr.setLeftMovementAvailable(false);
-
-            bl.setRightMovementAvailable(false);
-            br.setLeftMovementAvailable(false);
+            placeVerticalWall(Math.min(i1, i2), j1);
+            return;
         }
+
+        throw new RuntimeException("Invalid wall");
     }
 
-    public List<String> getAvailableMoves(String pos) {
-        List<String> result = new ArrayList<>();
+    private void placeHorizontalWall(int row, int col) {
+        BoardTile tl = getRequiredTile(new Position(row, col));
+        BoardTile tr = getRequiredTile(new Position(row, col + 1));
+        BoardTile bl = getRequiredTile(new Position(row + 1, col));
+        BoardTile br = getRequiredTile(new Position(row + 1, col + 1));
 
-        int i = pos.charAt(0) - '0';
-        int j = pos.charAt(1) - '0';
+        if (!tl.isBackwardsMovementAvailable() || !tr.isBackwardsMovementAvailable()) {
+            throw new RuntimeException("Wall overlap");
+        }
 
-        String opponent = pos.equals(positionOfPlayer1) ? positionOfPlayer2 : positionOfPlayer1;
+        if (!tl.isRightMovementAvailable() && !bl.isRightMovementAvailable()) {
+            throw new RuntimeException("Wall crossing");
+        }
+
+        tl.setBackwardsMovementAvailable(false);
+        bl.setForwardMovementAvailable(false);
+
+        tr.setBackwardsMovementAvailable(false);
+        br.setForwardMovementAvailable(false);
+    }
+
+    private void placeVerticalWall(int row, int col) {
+        BoardTile tl = getRequiredTile(new Position(row, col));
+        BoardTile bl = getRequiredTile(new Position(row + 1, col));
+        BoardTile tr = getRequiredTile(new Position(row, col + 1));
+        BoardTile br = getRequiredTile(new Position(row + 1, col + 1));
+
+        if (!tl.isRightMovementAvailable() || !bl.isRightMovementAvailable()) {
+            throw new RuntimeException("Wall overlap");
+        }
+
+        if (!tl.isBackwardsMovementAvailable() && !tr.isBackwardsMovementAvailable()) {
+            throw new RuntimeException("Wall crossing");
+        }
+
+        tl.setRightMovementAvailable(false);
+        tr.setLeftMovementAvailable(false);
+
+        bl.setRightMovementAvailable(false);
+        br.setLeftMovementAvailable(false);
+    }
+
+    private BoardTile getRequiredTile(Position position) {
+        BoardTile tile = tiles.get(position);
+        if (tile == null) {
+            throw new RuntimeException("Wall outside board");
+        }
+        return tile;
+    }
+
+    public List<Position> getAvailableMoves(Position pos) {
+        List<Position> result = new ArrayList<>();
+        Position opponent = pos.equals(positionOfPlayer1) ? positionOfPlayer2 : positionOfPlayer1;
 
         BoardTile tile = tiles.get(pos);
         if (tile == null) return result;
 
-        BiConsumer<String, String> handleMove = (next, behind) -> {
-            if (!tiles.containsKey(next)) return;
-
-            if (!next.equals(opponent)) {
-                result.add(next);
-                return;
-            }
-
-            if (behind != null && tiles.containsKey(behind)
-                    && !isBlocked(next, behind)) {
-
-                result.add(behind);
-            }
-        };
-
-        if (tile.isLeftMovementAvailable()) {
-            String next = i + "" + (j - 1);
-            String behind = i + "" + (j - 2);
-            handleMove.accept(next, behind);
-        }
-
-        if (tile.isRightMovementAvailable()) {
-            String next = i + "" + (j + 1);
-            String behind = i + "" + (j + 2);
-            handleMove.accept(next, behind);
-        }
-
-        if (tile.isForwardMovementAvailable()) {
-            String next = (i - 1) + "" + j;
-            String behind = (i - 2) + "" + j;
-            handleMove.accept(next, behind);
-        }
-
-        if (tile.isBackwardsMovementAvailable()) {
-            String next = (i + 1) + "" + j;
-            String behind = (i + 2) + "" + j;
-            handleMove.accept(next, behind);
-        }
+        handleMove(result, pos, opponent, -1, 0, tile.isForwardMovementAvailable());
+        handleMove(result, pos, opponent, 1, 0, tile.isBackwardsMovementAvailable());
+        handleMove(result, pos, opponent, 0, -1, tile.isLeftMovementAvailable());
+        handleMove(result, pos, opponent, 0, 1, tile.isRightMovementAvailable());
 
         return result;
     }
 
-    private boolean isBlocked(String from, String to) {
-        BoardTile tile = tiles.get(from);
-        int i1 = from.charAt(0) - '0';
-        int j1 = from.charAt(1) - '0';
+    private void handleMove(List<Position> result, Position pos, Position opponent,
+                            int rowDelta, int colDelta, boolean movementAvailable) {
+        if (!movementAvailable) {
+            return;
+        }
 
-        int i2 = to.charAt(0) - '0';
-        int j2 = to.charAt(1) - '0';
+        Position next = pos.move(rowDelta, colDelta);
+        if (!tiles.containsKey(next)) {
+            return;
+        }
+
+        if (!next.equals(opponent)) {
+            result.add(next);
+            return;
+        }
+
+        Position behind = next.move(rowDelta, colDelta);
+        if (tiles.containsKey(behind) && !isBlocked(next, behind)) {
+            result.add(behind);
+            return;
+        }
+
+        addDiagonalJumps(result, next, rowDelta, colDelta);
+    }
+
+    private void addDiagonalJumps(List<Position> result, Position opponent, int rowDelta, int colDelta) {
+        if (rowDelta != 0) {
+            addDiagonalJump(result, opponent, 0, -1);
+            addDiagonalJump(result, opponent, 0, 1);
+        } else {
+            addDiagonalJump(result, opponent, -1, 0);
+            addDiagonalJump(result, opponent, 1, 0);
+        }
+    }
+
+    private void addDiagonalJump(List<Position> result, Position from, int rowDelta, int colDelta) {
+        Position next = from.move(rowDelta, colDelta);
+        if (tiles.containsKey(next) && !isBlocked(from, next)) {
+            result.add(next);
+        }
+    }
+
+    private boolean isBlocked(Position from, Position to) {
+        BoardTile tile = tiles.get(from);
+        int i1 = from.row();
+        int j1 = from.col();
+
+        int i2 = to.row();
+        int j2 = to.col();
 
         if (i1 == i2) {
             if (j2 > j1) return !tile.isRightMovementAvailable();
@@ -146,9 +164,9 @@ public class Board {
 
     public Board copy() {
         Board copy = new Board();
-        Map<String, BoardTile> newTiles = new HashMap<>();
+        Map<Position, BoardTile> newTiles = new HashMap<>();
 
-        for (Map.Entry<String, BoardTile> entry : tiles.entrySet()) {
+        for (Map.Entry<Position, BoardTile> entry : tiles.entrySet()) {
             BoardTile t = entry.getValue();
 
             newTiles.put(entry.getKey(), new BoardTile(

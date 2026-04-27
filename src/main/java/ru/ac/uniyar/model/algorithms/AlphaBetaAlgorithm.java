@@ -18,10 +18,19 @@ public class AlphaBetaAlgorithm implements Algorithm {
      * лучшие ходы, которые приводят к beta <= alpha
      */
     private final Move[][] bestMoves = new Move[50][2];
+    private AlgorithmReport lastReport;
+    private long nodesVisited;
+    private long consideredMoves;
+    private long cutoffs;
 
     @Override
     public ComputerAlgorithmType getType() {
         return ComputerAlgorithmType.ALPHABETA;
+    }
+
+    @Override
+    public AlgorithmReport getLastReport() {
+        return lastReport;
     }
 
     /**
@@ -30,7 +39,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
      * AlphaBeta ищет глубже MiniMax за счет сортировки ходов и отсечений
      */
     @Override
-    public Move getMove(Board board, ComputerPlayerHardnessLevel level, int playerId, int wallsLeft) {
+    public Move getMove(Board board, ComputerPlayerHardnessLevel level, int playerId, int wallsLeft1, int wallsLeft2) {
         int size = (int) Math.sqrt(board.getTiles().size());
         int multiplier = Math.max(1, size / GameSize.NORMAL.getAmountOfTilesPerSide());
         int maxDepth = switch (level) {
@@ -41,17 +50,34 @@ public class AlphaBetaAlgorithm implements Algorithm {
         long endTime = System.currentTimeMillis() + getTimeLimit(level, size);
 
         cache.clear();
+        nodesVisited = 0;
+        consideredMoves = 0;
+        cutoffs = 0;
 
         Move bestMove = null;
+        int bestScore = 0;
+        int reachedDepth = 0;
         for (int depth = 1; depth <= maxDepth; ++depth) {
             if (System.currentTimeMillis() > endTime) {
                 break;
             }
-            Move move = search(board, depth, playerId, size, wallsLeft, wallsLeft, endTime);
-            if (move != null) {
-                bestMove = move;
+            SearchResult result = search(board, depth, playerId, size, wallsLeft1, wallsLeft2, endTime);
+            if (result.move() != null) {
+                bestMove = result.move();
+                bestScore = result.score();
+                reachedDepth = depth;
             }
         }
+        lastReport = new AlgorithmReport(
+                getType().getDescription(),
+                bestMove,
+                bestScore,
+                reachedDepth,
+                nodesVisited,
+                consideredMoves,
+                cutoffs,
+                "AlphaBeta сортирует ходы и отбрасывает ветви при beta <= alpha"
+        );
         return bestMove;
     }
 
@@ -59,13 +85,14 @@ public class AlphaBetaAlgorithm implements Algorithm {
      * генерируем всевозможные ходы, сортируем и отбираем из них топ кандидатов
      * потом прогоняем через alpha-beta функцию оценки
      */
-    private Move search(Board board, int depth, int playerId, int size,
-                        int wallsLeft1, int wallsLeft2, long endTime) {
+    private SearchResult search(Board board, int depth, int playerId, int size,
+                                int wallsLeft1, int wallsLeft2, long endTime) {
         List<Move> moves = getMoves(board, playerId, wallsLeft1);
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0);
         if (moves.size() > 36) {
             moves = moves.subList(0, 36);
         }
+        consideredMoves += moves.size();
 
         Move bestMove = null;
         int best = Integer.MIN_VALUE;
@@ -91,7 +118,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
                 bestMove = move;
             }
         }
-        return bestMove;
+        return new SearchResult(bestMove, best);
     }
 
     /**
@@ -102,6 +129,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
     private int alphaBeta(Board board, int depth, int alpha, int beta, boolean max,
                           int playerId, int size, int wallsLeft1, int wallsLeft2,
                           long endTime, int ply) {
+        nodesVisited++;
         if (System.currentTimeMillis() > endTime) {
             return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
         }
@@ -109,6 +137,12 @@ public class AlphaBetaAlgorithm implements Algorithm {
         Integer cached = cache.get(key);
         if (cached != null) {
             return cached;
+        }
+
+        Integer terminal = terminalScore(board, playerId, size, depth);
+        if (terminal != null) {
+            cache.put(key, terminal);
+            return terminal;
         }
 
         if (depth == 0) {
@@ -125,6 +159,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         if (moves.size() > 36) {
             moves = moves.subList(0, 36);
         }
+        consideredMoves += moves.size();
 
         int best = max ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
@@ -153,6 +188,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
             }
 
             if (beta <= alpha) {
+                cutoffs++;
                 updateBestMoves(move, ply);
                 updateGoodMoves(move);
                 break;
@@ -216,5 +252,8 @@ public class AlphaBetaAlgorithm implements Algorithm {
      */
     private void updateGoodMoves(Move move) {
         goodMoves.merge(move.toString(), 1, Integer::sum);
+    }
+
+    private record SearchResult(Move move, int score) {
     }
 }

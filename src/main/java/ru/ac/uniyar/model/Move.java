@@ -18,10 +18,10 @@ import ru.ac.uniyar.model.enums.MoveType;
 public class Move {
     private MoveType moveType;
     private int playerId;
-    private String startPosition;
-    private String endPosition;
+    private Position startPosition;
+    private Position endPosition;
 
-    public static Move movePlayer(int playerId, String endPosition) {
+    public static Move movePlayer(int playerId, Position endPosition) {
         return new Move(
                 MoveType.MOVE_PLAYER,
                 playerId,
@@ -30,7 +30,7 @@ public class Move {
         );
     }
 
-    public static Move placeWall(int playerId, String startPosition, String endPosition) {
+    public static Move placeWall(int playerId, Position startPosition, Position endPosition) {
         return new Move(
                 MoveType.PLACE_WALL,
                 playerId,

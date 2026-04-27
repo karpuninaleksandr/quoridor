@@ -47,11 +47,17 @@ public class Game {
     }
 
     private void checkIfFinished() {
-        int player1Row = board.getPositionOfPlayer1().charAt(0) - '0';
-        int player2Row = board.getPositionOfPlayer2().charAt(0) - '0';
+        int player1Row = board.getPositionOfPlayer1().row();
+        int player2Row = board.getPositionOfPlayer2().row();
 
         if (player1Row == 0 || player2Row == gameSize.getAmountOfTilesPerSide() - 1) {
             finished = true;
         }
+    }
+
+    public boolean isWonBy(int playerId) {
+        int targetRow = playerId == 1 ? 0 : gameSize.getAmountOfTilesPerSide() - 1;
+        Position position = playerId == 1 ? board.getPositionOfPlayer1() : board.getPositionOfPlayer2();
+        return position.row() == targetRow;
     }
 }

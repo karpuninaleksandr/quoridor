@@ -6,10 +6,12 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import ru.ac.uniyar.model.*;
+import ru.ac.uniyar.model.algorithms.AlgorithmReport;
 import ru.ac.uniyar.model.players.HumanPlayer;
 import ru.ac.uniyar.model.players.Player;
 import ru.ac.uniyar.service.GameProcessor;
@@ -26,9 +28,18 @@ public class GamePageController extends VerticalLayout {
     private final H1 turnLabel = new H1();
     private final H1 wallsLabel = new H1();
     private final Button aiStepButton = new Button("Сделать ход ИИ");
+    private final Div reportPanel = new Div();
+    private final Div hintPanel = new Div();
+    private final Div historyPanel = new Div();
 
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
+        setSizeFull();
+        setAlignItems(Alignment.CENTER);
+        getStyle()
+                .set("background", "#f6f7f9")
+                .set("padding", "20px")
+                .set("box-sizing", "border-box");
 
         Button restartButton = new Button("Начать сначала");
         restartButton.addClickListener(e -> UI.getCurrent().navigate("start"));
@@ -40,17 +51,61 @@ public class GamePageController extends VerticalLayout {
                 Notification.show("Сейчас ход человека", 1000, Notification.Position.MIDDLE);
                 return;
             }
-            makeComputerMove();
+            gameProcessor.makeComputerMove();
+            renderBoard();
+            processTurn();
+        });
+        Button hintButton = new Button("Подсказка хода", e -> {
+            if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer) || gameProcessor.isReplayMode()) {
+                Notification.show("Подсказка доступна на ходе игрока", 1000, Notification.Position.MIDDLE);
+                return;
+            }
+            AlgorithmReport hint = gameProcessor.getHintForCurrentPlayer();
+            hintPanel.setText(hint == null
+                    ? "Подсказка недоступна"
+                    : "Совет: " + describeMove(hint.move())
+                    + " | оценка: " + hint.score()
+                    + " | глубина: " + hint.reachedDepth()
+                    + " | узлы: " + hint.nodesVisited());
+        });
+        Button replayPreviousButton = new Button("Назад по истории", e -> {
+            gameProcessor.replayPrevious();
+            renderBoard();
+        });
+        Button replayNextButton = new Button("Вперед", e -> {
+            gameProcessor.replayNext();
+            renderBoard();
+            processTurn();
+        });
+        Button replayLiveButton = new Button("К текущему ходу", e -> {
+            gameProcessor.replayLive();
             renderBoard();
             processTurn();
         });
 
-        add(new H1("Игра"));
+        H1 title = new H1("Игра");
+        title.getStyle().set("margin", "0");
+        HorizontalLayout actionBar = new HorizontalLayout(aiStepButton, hintButton, replayPreviousButton, replayNextButton, replayLiveButton, restartButton);
+        actionBar.setWidth("min(980px, 100%)");
+        actionBar.getStyle()
+                .set("background", "white")
+                .set("padding", "12px")
+                .set("border-radius", "8px")
+                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
+                .set("flex-wrap", "wrap");
+
+        styleInfoPanel(reportPanel);
+        styleInfoPanel(hintPanel);
+        styleInfoPanel(historyPanel);
+
+        add(title);
         add(turnLabel);
         add(wallsLabel);
-        add(aiStepButton);
+        add(actionBar);
+        add(hintPanel);
+        add(reportPanel);
         add(boardGrid);
-        add(restartButton);
+        add(historyPanel);
     }
 
     @Override
@@ -66,7 +121,9 @@ public class GamePageController extends VerticalLayout {
         Game game = gameProcessor.getGame();
         if (game == null) return;
 
-        turnLabel.setText("Ход игрока: P" + gameProcessor.getCurrentPlayer().getPlayerId());
+        turnLabel.setText(gameProcessor.isReplayMode()
+                ? "Просмотр хода #" + gameProcessor.getDisplayedMoveNumber()
+                : "Ход игрока: P" + gameProcessor.getCurrentPlayer().getPlayerId());
 
         Player p1 = game.getPlayer1();
         Player p2 = game.getPlayer2();
@@ -74,19 +131,30 @@ public class GamePageController extends VerticalLayout {
         wallsLabel.setText("Стены: P1=" + p1.getAmountOfWallsLeft() + " | P2=" + p2.getAmountOfWallsLeft());
         updateAiStepButton();
 
-        Board board = game.getBoard();
+        renderReport();
+        renderHistory();
+
+        Board board = gameProcessor.getBoardForDisplay();
         int size = game.getGameSize().getAmountOfTilesPerSide();
         int renderSize = size * 2 - 1;
 
         boardGrid.getStyle()
                 .set("display", "grid")
-                .set("grid-template-columns", buildTemplate(renderSize));
+                .set("grid-template-columns", buildTemplate(renderSize))
+                .set("background", "#d1d5db")
+                .set("padding", "10px")
+                .set("border-radius", "8px")
+                .set("box-shadow", "0 12px 28px rgba(15, 23, 42, 0.14)");
 
-        String currentPos = gameProcessor.getCurrentPlayer().getPlayerId() == 1
-                ? board.getPositionOfPlayer1()
-                : board.getPositionOfPlayer2();
-
-        List<String> allowedMoves = board.getAvailableMoves(currentPos);
+        final List<Position> allowedMoves;
+        if (gameProcessor.isReplayMode()) {
+            allowedMoves = List.of();
+        } else {
+            Position currentPos = gameProcessor.getCurrentPlayer().getPlayerId() == 1
+                    ? board.getPositionOfPlayer1()
+                    : board.getPositionOfPlayer2();
+            allowedMoves = board.getAvailableMoves(currentPos);
+        }
 
         for (int i = 0; i < renderSize; i++) {
             for (int j = 0; j < renderSize; j++) {
@@ -97,17 +165,18 @@ public class GamePageController extends VerticalLayout {
                 if (isTile) {
                     int ci = i / 2;
                     int cj = j / 2;
-                    String pos = ci + "" + cj;
+                    Position pos = new Position(ci, cj);
 
                     cell.setWidth("50px");
                     cell.setHeight("50px");
 
                     cell.getStyle()
-                            .set("border", "1px solid black")
+                            .set("border", "1px solid #9ca3af")
                             .set("display", "flex")
                             .set("align-items", "center")
                             .set("justify-content", "center")
-                            .set("background", "white");
+                            .set("background", "white")
+                            .set("font-weight", "700");
 
                     if (pos.equals(board.getPositionOfPlayer1())) cell.setText("P1");
                     if (pos.equals(board.getPositionOfPlayer2())) cell.setText("P2");
@@ -121,6 +190,7 @@ public class GamePageController extends VerticalLayout {
 
                     cell.addClickListener(e -> {
                         if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer)) return;
+                        if (gameProcessor.isReplayMode()) return;
 
                         if (!allowedMoves.contains(pos)) {
                             Notification.show("Нельзя ходить сюда", 1000, Notification.Position.MIDDLE);
@@ -156,9 +226,9 @@ public class GamePageController extends VerticalLayout {
                         int ci = i / 2;
                         int cj = j / 2;
 
-                        BoardTile left = board.getTiles().get(ci + "" + (cj + 1));
-                        BoardTile middle = board.getTiles().get(ci + "" + cj);
-                        BoardTile right = board.getTiles().get(ci + "" + (cj - 1));
+                        BoardTile left = board.getTiles().get(new Position(ci, cj + 1));
+                        BoardTile middle = board.getTiles().get(new Position(ci, cj));
+                        BoardTile right = board.getTiles().get(new Position(ci, cj - 1));
 
                         isWall = ((left != null && !left.isBackwardsMovementAvailable()) ||
                                 (right != null && !right.isBackwardsMovementAvailable()))
@@ -169,16 +239,16 @@ public class GamePageController extends VerticalLayout {
                         int ci = i / 2;
                         int cj = j / 2;
 
-                        BoardTile top = board.getTiles().get((ci + 1) + "" + cj);
-                        BoardTile middle = board.getTiles().get(ci + "" + cj);
-                        BoardTile bottom = board.getTiles().get((ci - 1) + "" + cj);
+                        BoardTile top = board.getTiles().get(new Position(ci + 1, cj));
+                        BoardTile middle = board.getTiles().get(new Position(ci, cj));
+                        BoardTile bottom = board.getTiles().get(new Position(ci - 1, cj));
 
                         isWall = ((top != null && !top.isRightMovementAvailable()) ||
                                 (bottom != null && !bottom.isRightMovementAvailable()))
                                 && (middle != null && !middle.isRightMovementAvailable());
                     }
 
-                    cell.getStyle().set("background", isWall ? "brown" : "#eaeaea");
+                    cell.getStyle().set("background", isWall ? "#7c2d12" : "#e5e7eb");
 
                     final int fi = i;
                     final int fj = j;
@@ -194,46 +264,27 @@ public class GamePageController extends VerticalLayout {
     }
 
     private void highlightIfValid(int i, int j) {
-        int[] w = extractWall(i, j);
+        if (gameProcessor.isReplayMode()) return;
+        Position[] w = gameProcessor.extractWall(i, j);
         if (w == null) return;
 
-        if (gameProcessor.canPlaceWall(w[0], w[1], w[2], w[3])) {
+        if (gameProcessor.canPlaceWall(w[0], w[1])) {
             highlightWallPreview(i, j);
         }
     }
 
     private void tryPlaceWall(int i, int j) {
-        int[] w = extractWall(i, j);
+        if (gameProcessor.isReplayMode()) return;
+        Position[] w = gameProcessor.extractWall(i, j);
         if (w == null) return;
 
-        if (!gameProcessor.tryPlaceWall(w[0], w[1], w[2], w[3])) {
+        if (!gameProcessor.tryPlaceWall(w[0].row(), w[0].col(), w[1].row(), w[1].col())) {
             Notification.show("Некорректная стена", 1000, Notification.Position.MIDDLE);
             return;
         }
 
         renderBoard();
         ui.access(this::processTurn);
-    }
-
-    private int[] extractWall(int i, int j) {
-        Game game = gameProcessor.getGame();
-        if (game == null) return null;
-
-        int ci = i / 2;
-        int cj = j / 2;
-        int size = game.getGameSize().getAmountOfTilesPerSide();
-
-        if (i % 2 == 1 && j % 2 == 0) {
-            if (cj + 1 >= size || ci + 1 >= size) return null;
-            return new int[]{ci, cj, ci, cj + 1};
-        }
-
-        if (i % 2 == 0 && j % 2 == 1) {
-            if (ci + 1 >= size || cj + 1 >= size) return null;
-            return new int[]{ci, cj, ci + 1, cj};
-        }
-
-        return null;
     }
 
     private void highlightWallPreview(int i, int j) {
@@ -273,6 +324,7 @@ public class GamePageController extends VerticalLayout {
 
     private void processTurn() {
         Game game = gameProcessor.getGame();
+        if (gameProcessor.isReplayMode()) return;
 
         if (game != null && game.isFinished()) {
             VaadinSession.getCurrent().setAttribute("game", game);
@@ -288,30 +340,16 @@ public class GamePageController extends VerticalLayout {
                 return;
             }
 
-            makeComputerMove();
+            gameProcessor.makeComputerMove();
             renderBoard();
             processTurn();
-        }
-    }
-
-    private void makeComputerMove() {
-        Game game = gameProcessor.getGame();
-        Player currentPlayer = gameProcessor.getCurrentPlayer();
-
-        Move move = currentPlayer.getMove(
-                game.getBoard(),
-                currentPlayer.getPlayerId(),
-                currentPlayer.getAmountOfWallsLeft()
-        );
-
-        if (move != null) {
-            gameProcessor.makeMove(move);
         }
     }
 
     private void updateAiStepButton() {
         Game game = gameProcessor.getGame();
         boolean visible = game != null && !game.isFinished()
+                && !gameProcessor.isReplayMode()
                 && isAiVsAi(game)
                 && !(gameProcessor.getCurrentPlayer() instanceof HumanPlayer);
         aiStepButton.setVisible(visible);
@@ -322,5 +360,54 @@ public class GamePageController extends VerticalLayout {
 
     private boolean isAiVsAi(Game game) {
         return !(game.getPlayer1() instanceof HumanPlayer) && !(game.getPlayer2() instanceof HumanPlayer);
+    }
+
+    private void renderReport() {
+        reportPanel.removeAll();
+        AlgorithmReport report = gameProcessor.getLastAiReport();
+        if (report == null) {
+            reportPanel.setText("Ход ИИ еще не выполнен");
+            return;
+        }
+        reportPanel.setText(
+                "ИИ: " + report.algorithm()
+                        + " | ход: " + describeMove(report.move())
+                        + " | оценка: " + report.score()
+                        + " | глубина/rollout: " + report.reachedDepth()
+                        + " | узлы/итерации: " + report.nodesVisited()
+                        + " | кандидаты: " + report.consideredMoves()
+                        + " | отсечения: " + report.cutoffs()
+                        + " | " + report.explanation()
+        );
+    }
+
+    private void renderHistory() {
+        historyPanel.removeAll();
+        StringBuilder history = new StringBuilder("История ходов:\n");
+        List<Move> moves = gameProcessor.getMoveHistory();
+        for (int i = 0; i < moves.size(); ++i) {
+            history.append(i + 1).append(". ").append(describeMove(moves.get(i))).append("\n");
+        }
+        historyPanel.getStyle().set("white-space", "pre-line");
+        historyPanel.setText(history.toString());
+    }
+
+    private void styleInfoPanel(Div panel) {
+        panel.setWidth("min(980px, 100%)");
+        panel.getStyle()
+                .set("background", "white")
+                .set("padding", "12px 14px")
+                .set("border-radius", "8px")
+                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)");
+    }
+
+    private String describeMove(Move move) {
+        if (move == null) {
+            return "-";
+        }
+        if (move.getMoveType() == ru.ac.uniyar.model.enums.MoveType.MOVE_PLAYER) {
+            return "P" + move.getPlayerId() + " -> " + move.getEndPosition();
+        }
+        return "P" + move.getPlayerId() + " стена " + move.getStartPosition() + "-" + move.getEndPosition();
     }
 }

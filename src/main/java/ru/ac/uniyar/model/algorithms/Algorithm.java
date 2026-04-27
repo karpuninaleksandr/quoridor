@@ -2,6 +2,7 @@ package ru.ac.uniyar.model.algorithms;
 
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
+import ru.ac.uniyar.model.Position;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
 import ru.ac.uniyar.model.enums.GameSize;
@@ -10,14 +11,20 @@ import ru.ac.uniyar.model.enums.MoveType;
 import java.util.*;
 
 public interface Algorithm {
+    int WIN_SCORE = 100_000;
+
     ComputerAlgorithmType getType();
-    Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int amountOfWallsLeft);
+    Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2);
+
+    default AlgorithmReport getLastReport() {
+        return null;
+    }
 
     default List<Move> getMoves(Board board, int playerId, int wallsLeft) {
         List<Move> moves = new ArrayList<>();
-        String pos = getCurrentPosition(board, playerId);
+        Position pos = getCurrentPosition(board, playerId);
 
-        for (String next : board.getAvailableMoves(pos)) {
+        for (Position next : board.getAvailableMoves(pos)) {
             moves.add(Move.movePlayer(playerId, next));
         }
 
@@ -27,11 +34,11 @@ public interface Algorithm {
 
         int size = (int) Math.sqrt(board.getTiles().size());
         Set<String> used = new HashSet<>();
-        List<String> enemyPath = getShortestPathCells(board, getCurrentPosition(board, 3 - playerId),
+        List<Position> enemyPath = getShortestPathCells(board, getCurrentPosition(board, 3 - playerId),
                 getTargetRow(3 - playerId, size));
-        List<String> myPath = getShortestPathCells(board, getCurrentPosition(board, playerId),
+        List<Position> myPath = getShortestPathCells(board, getCurrentPosition(board, playerId),
                 getTargetRow(playerId, size));
-        List<String> candidateCells = new ArrayList<>();
+        List<Position> candidateCells = new ArrayList<>();
         candidateCells.addAll(enemyPath.subList(0, Math.min(10, enemyPath.size())));
         candidateCells.addAll(myPath.subList(0, Math.min(6, myPath.size())));
         addNeighborhood(candidateCells, getCurrentPosition(board, 3 - playerId), size);
@@ -39,13 +46,13 @@ public interface Algorithm {
         int beforeEnemy = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
         int beforeMine = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
 
-        for (String cell : candidateCells) {
-            int i = cell.charAt(0) - '0';
-            int j = cell.charAt(1) - '0';
+        for (Position cell : candidateCells) {
+            int i = cell.row();
+            int j = cell.col();
 
             if (i < size - 1) {
-                String start = i + "" + j;
-                String end = (i + 1) + "" + j;
+                Position start = new Position(i, j);
+                Position end = new Position(i + 1, j);
                 String wallKey = start + "-" + end;
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
@@ -56,8 +63,8 @@ public interface Algorithm {
             }
 
             if (j < size - 1) {
-                String start = i + "" + j;
-                String end = i + "" + (j + 1);
+                Position start = new Position(i, j);
+                Position end = new Position(i, j + 1);
                 String wallKey = start + "-" + end;
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
@@ -70,22 +77,19 @@ public interface Algorithm {
         return moves;
     }
 
-    default void addNeighborhood(List<String> cells, String center, int size) {
-        int row = center.charAt(0) - '0';
-        int col = center.charAt(1) - '0';
-
+    default void addNeighborhood(List<Position> cells, Position center, int size) {
         for (int di = -2; di <= 2; ++di) {
             for (int dj = -2; dj <= 2; ++dj) {
-                int nextRow = row + di;
-                int nextCol = col + dj;
+                int nextRow = center.row() + di;
+                int nextCol = center.col() + dj;
                 if (nextRow >= 0 && nextCol >= 0 && nextRow < size && nextCol < size) {
-                    cells.add(nextRow + "" + nextCol);
+                    cells.add(new Position(nextRow, nextCol));
                 }
             }
         }
     }
 
-    default boolean isStrategicWall(Board board, String start, String end, int playerId, int size,
+    default boolean isStrategicWall(Board board, Position start, Position end, int playerId, int size,
                                     int beforeEnemy, int beforeMine) {
         Board copy = board.copy();
         copy.placeWall(start, end);
@@ -96,7 +100,7 @@ public interface Algorithm {
         return afterEnemy > beforeEnemy || afterEnemy - beforeEnemy >= afterMine - beforeMine;
     }
 
-    default boolean isWallPlaceable(Board board, String start, String end) {
+    default boolean isWallPlaceable(Board board, Position start, Position end) {
         try {
             Board copy = board.copy();
             copy.placeWall(start, end);
@@ -106,25 +110,24 @@ public interface Algorithm {
         }
     }
 
-    default List<String> getShortestPathCells(Board board, String start, int targetRow) {
-        Map<String, String> parent = new HashMap<>();
-        Queue<String> queue = new ArrayDeque<>();
-        Set<String> visited = new HashSet<>();
+    default List<Position> getShortestPathCells(Board board, Position start, int targetRow) {
+        Map<Position, Position> parent = new HashMap<>();
+        Queue<Position> queue = new ArrayDeque<>();
+        Set<Position> visited = new HashSet<>();
 
         queue.add(start);
         visited.add(start);
 
-        String end = null;
+        Position end = null;
         while (!queue.isEmpty()) {
-            String curr = queue.poll();
-            int i = curr.charAt(0) - '0';
+            Position curr = queue.poll();
 
-            if (i == targetRow) {
+            if (curr.row() == targetRow) {
                 end = curr;
                 break;
             }
 
-            for (String next : board.getAvailableMoves(curr)) {
+            for (Position next : board.getAvailableMoves(curr)) {
                 if (visited.add(next)) {
                     parent.put(next, curr);
                     queue.add(next);
@@ -132,7 +135,7 @@ public interface Algorithm {
             }
         }
 
-        List<String> path = new ArrayList<>();
+        List<Position> path = new ArrayList<>();
         while (end != null) {
             path.add(end);
             end = parent.get(end);
@@ -140,7 +143,7 @@ public interface Algorithm {
         return path;
     }
 
-    default boolean isValidWall(Board board, String start, String end) {
+    default boolean isValidWall(Board board, Position start, Position end) {
         try {
             Board copy = board.copy();
             copy.placeWall(start, end);
@@ -153,22 +156,21 @@ public interface Algorithm {
         }
     }
 
-    private boolean hasPath(Board board, String start, int targetRow) {
-        Set<String> visited = new HashSet<>();
-        Queue<String> queue = new ArrayDeque<>();
+    private boolean hasPath(Board board, Position start, int targetRow) {
+        Set<Position> visited = new HashSet<>();
+        Queue<Position> queue = new ArrayDeque<>();
 
         queue.add(start);
         visited.add(start);
 
         while (!queue.isEmpty()) {
-            String curr = queue.poll();
-            int i = curr.charAt(0) - '0';
+            Position curr = queue.poll();
 
-            if (i == targetRow) {
+            if (curr.row() == targetRow) {
                 return true;
             }
 
-            for (String next : board.getAvailableMoves(curr)) {
+            for (Position next : board.getAvailableMoves(curr)) {
                 if (visited.add(next)) {
                     queue.add(next);
                 }
@@ -189,7 +191,7 @@ public interface Algorithm {
         }
     }
 
-    default String getCurrentPosition(Board board, int playerId) {
+    default Position getCurrentPosition(Board board, int playerId) {
         return playerId == 1 ? board.getPositionOfPlayer1() : board.getPositionOfPlayer2();
     }
 
@@ -197,7 +199,26 @@ public interface Algorithm {
         return playerId == 1 ? 0 : size - 1;
     }
 
+    default boolean isWin(Board board, int playerId, int size) {
+        return getCurrentPosition(board, playerId).row() == getTargetRow(playerId, size);
+    }
+
+    default Integer terminalScore(Board board, int rootPlayerId, int size, int depth) {
+        if (isWin(board, rootPlayerId, size)) {
+            return WIN_SCORE + depth;
+        }
+        if (isWin(board, 3 - rootPlayerId, size)) {
+            return -WIN_SCORE - depth;
+        }
+        return null;
+    }
+
     default int evaluate(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
+        Integer terminal = terminalScore(board, playerId, size, 0);
+        if (terminal != null) {
+            return terminal;
+        }
+
         int myDist = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
         int enemyDist = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
 
@@ -206,19 +227,21 @@ public interface Algorithm {
         score += board.getAvailableMoves(getCurrentPosition(board, playerId)).size() * 3;
         score -= board.getAvailableMoves(getCurrentPosition(board, 3 - playerId)).size() * 2;
 
-        score += (wallsLeft1 - wallsLeft2) * 15;
+        int myWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
+        int enemyWalls = playerId == 1 ? wallsLeft2 : wallsLeft1;
+        score += (myWalls - enemyWalls) * 15;
 
-        int myRow = getCurrentPosition(board, playerId).charAt(0) - '0';
-        int enemyRow = getCurrentPosition(board, 3 - playerId).charAt(0) - '0';
+        int myRow = getCurrentPosition(board, playerId).row();
+        int enemyRow = getCurrentPosition(board, 3 - playerId).row();
         score += playerId == 1 ? (size - 1 - myRow) * 4 : myRow * 4;
         score -= playerId == 1 ? enemyRow * 4 : (size - 1 - enemyRow) * 4;
 
         return score;
     }
 
-    default int calculateShortestPath(Board board, String start, int targetRow) {
-        Set<String> visited = new HashSet<>();
-        Queue<String> queue = new ArrayDeque<>();
+    default int calculateShortestPath(Board board, Position start, int targetRow) {
+        Set<Position> visited = new HashSet<>();
+        Queue<Position> queue = new ArrayDeque<>();
 
         queue.add(start);
         visited.add(start);
@@ -227,12 +250,11 @@ public interface Algorithm {
 
         while (!queue.isEmpty()) {
             for (int k = queue.size(); k > 0; --k) {
-                String curr = queue.poll();
+                Position curr = queue.poll();
 
-                int i = curr.charAt(0) - '0';
-                if (i == targetRow) return depth;
+                if (curr.row() == targetRow) return depth;
 
-                for (String next : board.getAvailableMoves(curr)) {
+                for (Position next : board.getAvailableMoves(curr)) {
                     if (visited.add(next)) {
                         queue.add(next);
                     }
@@ -257,7 +279,9 @@ public interface Algorithm {
         key.append(board.getPositionOfPlayer1()).append('|').append(board.getPositionOfPlayer2()).append('|');
 
         board.getTiles().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
+                .sorted(Comparator
+                        .comparingInt((Map.Entry<Position, ?> entry) -> entry.getKey().row())
+                        .thenComparingInt(entry -> entry.getKey().col()))
                 .forEach(entry -> {
                     key.append(entry.getKey());
                     key.append(entry.getValue().isLeftMovementAvailable() ? '1' : '0');
