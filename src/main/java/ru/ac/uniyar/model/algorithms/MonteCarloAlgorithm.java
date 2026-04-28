@@ -34,16 +34,14 @@ public class MonteCarloAlgorithm implements Algorithm {
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
         int size = (int) Math.sqrt(board.getTiles().size());
-        long endTime = System.currentTimeMillis() + getTimeLimit(hardnessLevel, size);
-        int rolloutDepth = switch (hardnessLevel) {
-            case EASY -> 35 * Math.max(1, size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case MEDIUM -> 70 * Math.max(1, size / GameSize.NORMAL.getAmountOfTilesPerSide());
-            case HARD -> 120 * Math.max(1, size / GameSize.NORMAL.getAmountOfTilesPerSide());
-        };
+        long timeLimit = getTimeLimit(hardnessLevel, size);
+        long endTime = System.currentTimeMillis() + timeLimit;
+        int rolloutDepth = getRolloutDepth(hardnessLevel, size);
+        long iterationBudget = getIterationBudget(hardnessLevel, size);
 
         long iterations = 0;
         Node root = new Node(board.copy(), null, null, playerId, wallsLeft1, wallsLeft2);
-        while (System.currentTimeMillis() < endTime) {
+        while (System.currentTimeMillis() < endTime && iterations < iterationBudget) {
             Node node = select(root);
             Node expanded = expand(node);
             int winner = simulate(expanded, rolloutDepth, playerId, size);
@@ -66,8 +64,37 @@ public class MonteCarloAlgorithm implements Algorithm {
                 root.children.size(),
                 0,
                 "MCTS: выбор по UCT, rollout с эвристическим сэмплированием ходов"
+                        + "; лимит времени: " + timeLimit + " мс"
+                        + ", бюджет итераций: " + iterationBudget
         );
         return best.move;
+    }
+
+    private int getRolloutDepth(ComputerPlayerHardnessLevel level, int size) {
+        return switch (level) {
+            case EASY -> size * 3;
+            case MEDIUM -> size * 5;
+            case HARD -> size * 8;
+        };
+    }
+
+    private long getIterationBudget(ComputerPlayerHardnessLevel level, int size) {
+        boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
+        return switch (level) {
+            case EASY -> largeBoard ? 250L : 350L;
+            case MEDIUM -> largeBoard ? 800L : 1100L;
+            case HARD -> largeBoard ? 1700L : 2400L;
+        };
+    }
+
+    @Override
+    public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
+        boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
+        return switch (level) {
+            case EASY -> largeBoard ? 800L : 650L;
+            case MEDIUM -> largeBoard ? 2500L : 1900L;
+            case HARD -> largeBoard ? 5200L : 4200L;
+        };
     }
 
     /**

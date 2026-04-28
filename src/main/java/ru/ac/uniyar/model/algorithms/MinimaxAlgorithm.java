@@ -33,12 +33,9 @@ public class MinimaxAlgorithm implements Algorithm {
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
         int size = (int) Math.sqrt(board.getTiles().size());
-        long endTime = System.currentTimeMillis() + getTimeLimit(hardnessLevel, size);
-        int maxDepth = switch (hardnessLevel) {
-            case EASY -> 2;
-            case MEDIUM -> 3;
-            case HARD -> 4;
-        };
+        long timeLimit = getTimeLimit(hardnessLevel, size);
+        long endTime = System.currentTimeMillis() + timeLimit;
+        int maxDepth = getMaxDepth(hardnessLevel, size);
 
         cache.clear();
         nodesVisited = 0;
@@ -67,8 +64,29 @@ public class MinimaxAlgorithm implements Algorithm {
                 consideredMoves,
                 0,
                 "MiniMax перебрал дерево без alpha-beta отсечений"
+                        + "; лимит времени: " + timeLimit + " мс"
         );
         return best;
+    }
+
+    private int getMaxDepth(ComputerPlayerHardnessLevel level, int size) {
+        boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
+        boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
+        return switch (level) {
+            case EASY -> 2;
+            case MEDIUM -> smallBoard ? 4 : 3;
+            case HARD -> largeBoard ? 3 : 4;
+        };
+    }
+
+    @Override
+    public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
+        boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
+        return switch (level) {
+            case EASY -> largeBoard ? 500L : 400L;
+            case MEDIUM -> largeBoard ? 1100L : 900L;
+            case HARD -> largeBoard ? 1900L : 1600L;
+        };
     }
 
     /**

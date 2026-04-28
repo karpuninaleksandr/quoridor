@@ -35,8 +35,8 @@ public class RandomAlgorithm implements Algorithm {
             }
             case MEDIUM -> {
                 moves.sort((a, b) -> Integer.compare(
-                        evaluateAfterMove(board, a, playerId, wallsLeft1, wallsLeft2),
-                        evaluateAfterMove(board, b, playerId, wallsLeft1, wallsLeft2)
+                        evaluateAfterMove(board, b, playerId, wallsLeft1, wallsLeft2),
+                        evaluateAfterMove(board, a, playerId, wallsLeft1, wallsLeft2)
                 ));
                 int half = moves.size() / 2 + 1;
                 result = moves.get(random.nextInt(half));
@@ -53,8 +53,16 @@ public class RandomAlgorithm implements Algorithm {
         }
         lastReport = new AlgorithmReport(getType().getDescription(), result,
                 evaluateAfterMove(board, result, playerId, wallsLeft1, wallsLeft2),
-                1, moves.size(), moves.size(), 0, "Эвристически ограниченный случайный выбор");
+                1, moves.size(), moves.size(), 0, describeHardness(hardnessLevel));
         return result;
+    }
+
+    private String describeHardness(ComputerPlayerHardnessLevel hardnessLevel) {
+        return switch (hardnessLevel) {
+            case EASY -> "Случайный выбор среди всех допустимых ходов";
+            case MEDIUM -> "Случайный выбор из верхней половины ходов по функции оценки";
+            case HARD -> "Случайный выбор из трех лучших ходов по функции оценки";
+        };
     }
 
     private int evaluateAfterMove(Board board, Move move, int playerId, int wallsLeft1, int wallsLeft2) {

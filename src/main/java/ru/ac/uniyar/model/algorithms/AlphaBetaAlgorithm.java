@@ -7,9 +7,9 @@ import java.util.*;
 
 public class AlphaBetaAlgorithm implements Algorithm {
     /**
-     * уже посчитанные ранее позиции
+     * transposition table хранит оценку позиции вместе с глубиной и типом границы
      */
-    private final Map<String, Integer> cache = new HashMap<>();
+    private final Map<String, TranspositionEntry> transpositionTable = new HashMap<>();
     /**
      * ходы, которые часто приводят к хорошим отсечениям
      */
@@ -22,6 +22,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
     private long nodesVisited;
     private long consideredMoves;
     private long cutoffs;
+    private long tableHits;
 
     @Override
     public ComputerAlgorithmType getType() {
@@ -41,18 +42,15 @@ public class AlphaBetaAlgorithm implements Algorithm {
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel level, int playerId, int wallsLeft1, int wallsLeft2) {
         int size = (int) Math.sqrt(board.getTiles().size());
-        int multiplier = Math.max(1, size / GameSize.NORMAL.getAmountOfTilesPerSide());
-        int maxDepth = switch (level) {
-            case EASY -> 4 * multiplier;
-            case MEDIUM -> 6 * multiplier;
-            case HARD -> 8 * multiplier;
-        };
-        long endTime = System.currentTimeMillis() + getTimeLimit(level, size);
+        int maxDepth = getMaxDepth(level, size);
+        long timeLimit = getTimeLimit(level, size);
+        long endTime = System.currentTimeMillis() + timeLimit;
 
-        cache.clear();
+        transpositionTable.clear();
         nodesVisited = 0;
         consideredMoves = 0;
         cutoffs = 0;
+        tableHits = 0;
 
         Move bestMove = null;
         int bestScore = 0;
@@ -76,9 +74,32 @@ public class AlphaBetaAlgorithm implements Algorithm {
                 nodesVisited,
                 consideredMoves,
                 cutoffs,
-                "AlphaBeta сортирует ходы и отбрасывает ветви при beta <= alpha"
+                "AlphaBeta использует сортировку ходов, beta <= alpha отсечения и transposition table"
+                        + " с depth-bound flags; попаданий в таблицу: " + tableHits
+                        + "; лимит времени: " + timeLimit + " мс"
         );
         return bestMove;
+    }
+
+    private int getMaxDepth(ComputerPlayerHardnessLevel level, int size) {
+        boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
+        boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
+        return switch (level) {
+            case EASY -> smallBoard ? 4 : 3;
+            case MEDIUM -> smallBoard ? 6 : 5;
+            case HARD -> largeBoard ? 6 : 7;
+        };
+    }
+
+    @Override
+    public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
+        boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
+        boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
+        return switch (level) {
+            case EASY -> smallBoard ? 700L : 900L;
+            case MEDIUM -> largeBoard ? 3200L : 2400L;
+            case HARD -> largeBoard ? 6500L : 5000L;
+        };
     }
 
     /**
@@ -88,7 +109,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
     private SearchResult search(Board board, int depth, int playerId, int size,
                                 int wallsLeft1, int wallsLeft2, long endTime) {
         List<Move> moves = getMoves(board, playerId, wallsLeft1);
-        orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0);
+        orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0, null);
         if (moves.size() > 36) {
             moves = moves.subList(0, 36);
         }
@@ -133,21 +154,36 @@ public class AlphaBetaAlgorithm implements Algorithm {
         if (System.currentTimeMillis() > endTime) {
             return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
         }
-        String key = boardKey(board) + "|" + depth + "|" + max + "|" + wallsLeft1 + "|" + wallsLeft2;
-        Integer cached = cache.get(key);
-        if (cached != null) {
-            return cached;
+        String key = boardKey(board) + "|" + max + "|" + wallsLeft1 + "|" + wallsLeft2;
+        int originalAlpha = alpha;
+        int originalBeta = beta;
+
+        TranspositionEntry cached = transpositionTable.get(key);
+        if (cached != null && cached.depth >= depth) {
+            if (cached.bound == Bound.EXACT) {
+                tableHits++;
+                return cached.score;
+            }
+            if (cached.bound == Bound.LOWER) {
+                alpha = Math.max(alpha, cached.score);
+            } else if (cached.bound == Bound.UPPER) {
+                beta = Math.min(beta, cached.score);
+            }
+            if (alpha >= beta) {
+                tableHits++;
+                return cached.score;
+            }
         }
 
         Integer terminal = terminalScore(board, playerId, size, depth);
         if (terminal != null) {
-            cache.put(key, terminal);
+            transpositionTable.put(key, new TranspositionEntry(depth, terminal, Bound.EXACT, null));
             return terminal;
         }
 
         if (depth == 0) {
             int eval = evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
-            cache.put(key, eval);
+            transpositionTable.put(key, new TranspositionEntry(depth, eval, Bound.EXACT, null));
             return eval;
         }
 
@@ -155,13 +191,15 @@ public class AlphaBetaAlgorithm implements Algorithm {
         int walls = current == 1 ? wallsLeft1 : wallsLeft2;
 
         List<Move> moves = getMoves(board, current, walls);
-        orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, ply);
+        Move tableBestMove = cached == null ? null : cached.bestMove;
+        orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, ply, tableBestMove);
         if (moves.size() > 36) {
             moves = moves.subList(0, 36);
         }
         consideredMoves += moves.size();
 
         int best = max ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+        Move bestMove = null;
 
         for (Move move : moves) {
             Board copy = board.copy();
@@ -180,10 +218,16 @@ public class AlphaBetaAlgorithm implements Algorithm {
                     playerId, size, newWallsLeft1, newWallsLeft2, endTime, ply + 1);
 
             if (max) {
-                best = Math.max(best, val);
+                if (val > best) {
+                    best = val;
+                    bestMove = move;
+                }
                 alpha = Math.max(alpha, val);
             } else {
-                best = Math.min(best, val);
+                if (val < best) {
+                    best = val;
+                    bestMove = move;
+                }
                 beta = Math.min(beta, val);
             }
 
@@ -195,7 +239,13 @@ public class AlphaBetaAlgorithm implements Algorithm {
             }
         }
 
-        cache.put(key, best);
+        Bound bound = Bound.EXACT;
+        if (best <= originalAlpha) {
+            bound = Bound.UPPER;
+        } else if (best >= originalBeta) {
+            bound = Bound.LOWER;
+        }
+        transpositionTable.put(key, new TranspositionEntry(depth, best, bound, bestMove));
         return best;
     }
 
@@ -203,10 +253,10 @@ public class AlphaBetaAlgorithm implements Algorithm {
      * сортируем ходы
      */
     private void orderMoves(List<Move> moves, Board board, int playerId, int size,
-                            int wallsLeft1, int wallsLeft2, int ply) {
+                            int wallsLeft1, int wallsLeft2, int ply, Move tableBestMove) {
         moves.sort((a, b) -> Integer.compare(
-                scoreMove(b, board, playerId, size, wallsLeft1, wallsLeft2, ply),
-                scoreMove(a, board, playerId, size, wallsLeft1, wallsLeft2, ply)
+                scoreMove(b, board, playerId, size, wallsLeft1, wallsLeft2, ply, tableBestMove),
+                scoreMove(a, board, playerId, size, wallsLeft1, wallsLeft2, ply, tableBestMove)
         ));
     }
 
@@ -215,8 +265,12 @@ public class AlphaBetaAlgorithm implements Algorithm {
      * будет плюсом наличие этого хода в истории хороших или лучших ходов
      */
     private int scoreMove(Move move, Board board, int playerId, int size,
-                          int wallsLeft1, int wallsLeft2, int ply) {
+                          int wallsLeft1, int wallsLeft2, int ply, Move tableBestMove) {
         int score = 0;
+
+        if (tableBestMove != null && move.equals(tableBestMove)) {
+            score += 20000;
+        }
 
         if (ply < bestMoves.length) {
             if (bestMoves[ply][0] != null && move.equals(bestMoves[ply][0])) {
@@ -255,5 +309,14 @@ public class AlphaBetaAlgorithm implements Algorithm {
     }
 
     private record SearchResult(Move move, int score) {
+    }
+
+    private enum Bound {
+        EXACT,
+        LOWER,
+        UPPER
+    }
+
+    private record TranspositionEntry(int depth, int score, Bound bound, Move bestMove) {
     }
 }
