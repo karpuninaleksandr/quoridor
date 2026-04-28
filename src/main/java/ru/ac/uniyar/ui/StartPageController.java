@@ -47,9 +47,18 @@ public class StartPageController extends VerticalLayout {
         ComboBox<String> hardness1 = new ComboBox<>("Сложность P1");
         hardness1.setItems(Arrays.stream(ComputerPlayerHardnessLevel.values()).map(ComputerPlayerHardnessLevel::getDescription).toList());
         hardness1.setHelperText("Используется, если P1 играет ИИ");
+        hardness1.setVisible(false);
 
         ComboBox<String> hardness2 = new ComboBox<>("Сложность P2");
         hardness2.setItems(Arrays.stream(ComputerPlayerHardnessLevel.values()).map(ComputerPlayerHardnessLevel::getDescription).toList());
+
+        player1.addValueChangeListener(event -> {
+            boolean firstPlayerIsAi = event.getValue() != null && !"Игрок".equals(event.getValue());
+            hardness1.setVisible(firstPlayerIsAi);
+            if (!firstPlayerIsAi) {
+                hardness1.clear();
+            }
+        });
 
         Button startButton = new Button("Начать игру", event -> {
             String size = sizeSelector.getValue();

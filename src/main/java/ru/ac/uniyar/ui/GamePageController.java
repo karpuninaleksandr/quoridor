@@ -9,13 +9,14 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.VaadinSession;
 import ru.ac.uniyar.model.*;
 import ru.ac.uniyar.model.algorithms.AlgorithmReport;
 import ru.ac.uniyar.model.players.HumanPlayer;
 import ru.ac.uniyar.model.players.Player;
 import ru.ac.uniyar.service.GameProcessor;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 @Route("/game")
@@ -31,6 +32,8 @@ public class GamePageController extends VerticalLayout {
     private final Div reportPanel = new Div();
     private final Div hintPanel = new Div();
     private final Div historyPanel = new Div();
+    private final Div statisticsPanel = new Div();
+    private Move hintedMove;
 
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
@@ -61,12 +64,14 @@ public class GamePageController extends VerticalLayout {
                 return;
             }
             AlgorithmReport hint = gameProcessor.getHintForCurrentPlayer();
+            hintedMove = hint == null ? null : hint.move();
             hintPanel.setText(hint == null
                     ? "Подсказка недоступна"
-                    : "Совет: " + describeMove(hint.move())
+                    : "Подсказка подсвечена на поле"
                     + " | оценка: " + hint.score()
                     + " | глубина: " + hint.reachedDepth()
                     + " | узлы: " + hint.nodesVisited());
+            renderBoard();
         });
         Button replayPreviousButton = new Button("Назад по истории", e -> {
             gameProcessor.replayPrevious();
@@ -85,7 +90,7 @@ public class GamePageController extends VerticalLayout {
 
         H1 title = new H1("Игра");
         title.getStyle().set("margin", "0");
-        HorizontalLayout actionBar = new HorizontalLayout(aiStepButton, hintButton, replayPreviousButton, replayNextButton, replayLiveButton, restartButton);
+        HorizontalLayout actionBar = new HorizontalLayout(aiStepButton, hintButton, restartButton);
         actionBar.setWidth("min(980px, 100%)");
         actionBar.getStyle()
                 .set("background", "white")
@@ -97,15 +102,47 @@ public class GamePageController extends VerticalLayout {
         styleInfoPanel(reportPanel);
         styleInfoPanel(hintPanel);
         styleInfoPanel(historyPanel);
+        styleInfoPanel(statisticsPanel);
+
+        Div leftColumn = new Div(turnLabel, wallsLabel, hintPanel, reportPanel, statisticsPanel);
+        leftColumn.getStyle()
+                .set("display", "flex")
+                .set("flex-direction", "column")
+                .set("gap", "12px")
+                .set("width", "300px")
+                .set("min-width", "260px");
+
+        HorizontalLayout replayControls = new HorizontalLayout(replayPreviousButton, replayNextButton, replayLiveButton);
+        replayControls.getStyle().set("flex-wrap", "wrap");
+
+        Div rightColumn = new Div(historyPanel, replayControls);
+        rightColumn.getStyle()
+                .set("display", "flex")
+                .set("flex-direction", "column")
+                .set("gap", "12px")
+                .set("width", "300px")
+                .set("min-width", "260px");
+
+        Div boardColumn = new Div(boardGrid);
+        boardColumn.getStyle()
+                .set("display", "flex")
+                .set("justify-content", "center")
+                .set("align-items", "flex-start")
+                .set("min-width", "0")
+                .set("overflow", "auto");
+
+        Div gameLayout = new Div(leftColumn, boardColumn, rightColumn);
+        gameLayout.setWidthFull();
+        gameLayout.getStyle()
+                .set("display", "flex")
+                .set("justify-content", "center")
+                .set("align-items", "flex-start")
+                .set("gap", "16px")
+                .set("flex-wrap", "wrap");
 
         add(title);
-        add(turnLabel);
-        add(wallsLabel);
         add(actionBar);
-        add(hintPanel);
-        add(reportPanel);
-        add(boardGrid);
-        add(historyPanel);
+        add(gameLayout);
     }
 
     @Override
@@ -121,9 +158,13 @@ public class GamePageController extends VerticalLayout {
         Game game = gameProcessor.getGame();
         if (game == null) return;
 
-        turnLabel.setText(gameProcessor.isReplayMode()
-                ? "Просмотр хода #" + gameProcessor.getDisplayedMoveNumber()
-                : "Ход игрока: P" + gameProcessor.getCurrentPlayer().getPlayerId());
+        if (game.isFinished()) {
+            turnLabel.setText("Игра окончена. Победил " + getWinnerText(game));
+        } else {
+            turnLabel.setText(gameProcessor.isReplayMode()
+                    ? "Просмотр хода #" + gameProcessor.getDisplayedMoveNumber()
+                    : "Ход игрока: P" + gameProcessor.getCurrentPlayer().getPlayerId());
+        }
 
         Player p1 = game.getPlayer1();
         Player p2 = game.getPlayer2();
@@ -133,6 +174,7 @@ public class GamePageController extends VerticalLayout {
 
         renderReport();
         renderHistory();
+        renderStatistics();
 
         Board board = gameProcessor.getBoardForDisplay();
         int size = game.getGameSize().getAmountOfTilesPerSide();
@@ -181,11 +223,17 @@ public class GamePageController extends VerticalLayout {
                     if (pos.equals(board.getPositionOfPlayer1())) cell.setText("P1");
                     if (pos.equals(board.getPositionOfPlayer2())) cell.setText("P2");
 
+                    if (isHintedMoveDestination(pos)) {
+                        cell.getStyle()
+                                .set("background", "#fde68a")
+                                .set("box-shadow", "inset 0 0 0 4px #f59e0b");
+                    }
+
                     if (allowedMoves.contains(pos)) {
                         cell.getElement().addEventListener("mouseover", e ->
                                 cell.getStyle().set("background", "#a5d6a7"));
                         cell.getElement().addEventListener("mouseout", e ->
-                                cell.getStyle().set("background", "white"));
+                                cell.getStyle().set("background", isHintedMoveDestination(pos) ? "#fde68a" : "white"));
                     }
 
                     cell.addClickListener(e -> {
@@ -200,6 +248,7 @@ public class GamePageController extends VerticalLayout {
                         gameProcessor.makeMove(
                                 Move.movePlayer(gameProcessor.getCurrentPlayer().getPlayerId(), pos)
                         );
+                        hintedMove = null;
 
                         renderBoard();
                         processTurn();
@@ -248,7 +297,13 @@ public class GamePageController extends VerticalLayout {
                                 && (middle != null && !middle.isRightMovementAvailable());
                     }
 
-                    cell.getStyle().set("background", isWall ? "#7c2d12" : "#e5e7eb");
+                    if (isHintedWallCell(i, j)) {
+                        cell.getStyle()
+                                .set("background", "#f59e0b")
+                                .set("box-shadow", "0 0 0 2px #92400e");
+                    } else {
+                        cell.getStyle().set("background", isWall ? "#7c2d12" : "#e5e7eb");
+                    }
 
                     final int fi = i;
                     final int fj = j;
@@ -283,6 +338,7 @@ public class GamePageController extends VerticalLayout {
             return;
         }
 
+        hintedMove = null;
         renderBoard();
         ui.access(this::processTurn);
     }
@@ -324,12 +380,11 @@ public class GamePageController extends VerticalLayout {
 
     private void processTurn() {
         Game game = gameProcessor.getGame();
+        if (game == null) return;
         if (gameProcessor.isReplayMode()) return;
 
         if (game != null && game.isFinished()) {
-            VaadinSession.getCurrent().setAttribute("game", game);
-            ui.navigate("statistics");
-            turnLabel.setText("Игра окончена");
+            renderBoard();
             return;
         }
 
@@ -341,6 +396,7 @@ public class GamePageController extends VerticalLayout {
             }
 
             gameProcessor.makeComputerMove();
+            hintedMove = null;
             renderBoard();
             processTurn();
         }
@@ -392,13 +448,76 @@ public class GamePageController extends VerticalLayout {
         historyPanel.setText(history.toString());
     }
 
+    private void renderStatistics() {
+        statisticsPanel.removeAll();
+        Game game = gameProcessor.getGame();
+        if (game == null) {
+            statisticsPanel.setText("Статистика появится после старта партии");
+            return;
+        }
+
+        StringBuilder statistics = new StringBuilder();
+        statistics.append("Статистика\n");
+        statistics.append("Ходов: ").append(game.getAmountOfMoves()).append("\n");
+        statistics.append("Время игры (с): ")
+                .append(Duration.between(game.getGameTimeStart(), Instant.now()).toSeconds())
+                .append("\n");
+        statistics.append("Статус: ");
+        if (game.isFinished()) {
+            statistics.append("партия завершена, победил ").append(getWinnerText(game));
+        } else {
+            statistics.append("партия идет");
+        }
+
+        statisticsPanel.getStyle().set("white-space", "pre-line");
+        statisticsPanel.setText(statistics.toString());
+    }
+
     private void styleInfoPanel(Div panel) {
-        panel.setWidth("min(980px, 100%)");
+        panel.setWidthFull();
         panel.getStyle()
                 .set("background", "white")
                 .set("padding", "12px 14px")
                 .set("border-radius", "8px")
-                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)");
+                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
+                .set("box-sizing", "border-box");
+        if (panel == historyPanel) {
+            panel.getStyle()
+                    .set("height", "560px")
+                    .set("max-height", "560px")
+                    .set("overflow", "auto");
+        }
+    }
+
+    private boolean isHintedMoveDestination(Position position) {
+        return hintedMove != null
+                && hintedMove.getMoveType() == ru.ac.uniyar.model.enums.MoveType.MOVE_PLAYER
+                && position.equals(hintedMove.getEndPosition());
+    }
+
+    private boolean isHintedWallCell(int renderRow, int renderCol) {
+        if (hintedMove == null || hintedMove.getMoveType() != ru.ac.uniyar.model.enums.MoveType.PLACE_WALL) {
+            return false;
+        }
+        Position[] wall = gameProcessor.extractWall(renderRow, renderCol);
+        if (wall == null) {
+            return false;
+        }
+        return sameWall(wall[0], wall[1], hintedMove.getStartPosition(), hintedMove.getEndPosition());
+    }
+
+    private boolean sameWall(Position start1, Position end1, Position start2, Position end2) {
+        return (start1.equals(start2) && end1.equals(end2)) || (start1.equals(end2) && end1.equals(start2));
+    }
+
+    private String getWinnerText(Game game) {
+        if (game.isWonBy(1)) {
+            return "P1";
+        }
+        if (game.isWonBy(2)) {
+            return "P2";
+        }
+        return "не определен";
     }
 
     private String describeMove(Move move) {
