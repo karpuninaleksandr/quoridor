@@ -5,7 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.SessionScope;
 import ru.ac.uniyar.model.*;
+import ru.ac.uniyar.model.algorithms.Algorithm;
 import ru.ac.uniyar.model.algorithms.AlphaBetaAlgorithm;
+import ru.ac.uniyar.model.algorithms.MinimaxAlgorithm;
+import ru.ac.uniyar.model.algorithms.MonteCarloAlgorithm;
+import ru.ac.uniyar.model.algorithms.RandomAlgorithm;
 import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.algorithms.AlgorithmReport;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
@@ -26,34 +30,16 @@ public class GameProcessor {
     private ComputerPlayerFabric computerPlayerFabric;
     @Autowired
     private GameRules gameRules;
+    @Autowired
+    private BoardFactory boardFactory;
+    @Autowired
+    private BoardAnalyzer boardAnalyzer;
 
     private Game game;
     private final List<Move> moveHistory = new ArrayList<>();
     private final List<Board> boardHistory = new ArrayList<>();
     private Integer replayIndex;
     private AlgorithmReport lastAiReport;
-
-    public Board initBoard(GameSize gameSize) {
-        Board board = new Board();
-        int size = gameSize.getAmountOfTilesPerSide();
-
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < size; ++j) {
-                board.getTiles().put(new Position(i, j), new BoardTile(
-                        j != 0,
-                        i != 0,
-                        j != size - 1,
-                        i != size - 1
-                ));
-            }
-        }
-
-        int mid = (size - 1) / 2;
-        board.setPositionOfPlayer1(new Position(size - 1, mid));
-        board.setPositionOfPlayer2(new Position(0, mid));
-
-        return board;
-    }
 
     public void startNewGame(String sizeDescription, String typeOfPlayer1, String typeOfPlayer2, String gameHardness) {
         startNewGame(sizeDescription, typeOfPlayer1, typeOfPlayer2, gameHardness, gameHardness);
@@ -73,7 +59,7 @@ public class GameProcessor {
         player2.setPlayerId(2);
         player2.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
 
-        Board board = initBoard(gameSize);
+        Board board = boardFactory.create(gameSize);
 
         game = new Game(
                 gameSize,
@@ -108,6 +94,7 @@ public class GameProcessor {
             return null;
         }
 
+        Board before = game.getBoard().copy();
         Move move = computerPlayer.getMove(
                 game.getBoard(),
                 computerPlayer.getPlayerId(),
@@ -115,7 +102,7 @@ public class GameProcessor {
                 game.getPlayer2().getAmountOfWallsLeft()
         );
 
-        lastAiReport = computerPlayer.getLastReport();
+        lastAiReport = enrichReport(computerPlayer.getLastReport(), before, computerPlayer.getPlayerId());
 
         if (move != null) {
             makeMove(move);
@@ -131,7 +118,7 @@ public class GameProcessor {
         AlphaBetaAlgorithm advisor = new AlphaBetaAlgorithm();
         Move move = advisor.getMove(
                 game.getBoard().copy(),
-                ComputerPlayerHardnessLevel.MEDIUM,
+                getHintHardnessLevel(),
                 getCurrentPlayer().getPlayerId(),
                 game.getPlayer1().getAmountOfWallsLeft(),
                 game.getPlayer2().getAmountOfWallsLeft()
@@ -140,7 +127,7 @@ public class GameProcessor {
         if (report == null) {
             return null;
         }
-        return new AlgorithmReport(
+        return enrichReport(new AlgorithmReport(
                 "Подсказка: " + report.algorithm(),
                 move,
                 report.score(),
@@ -149,7 +136,56 @@ public class GameProcessor {
                 report.consideredMoves(),
                 report.cutoffs(),
                 "Советник использует AlphaBeta средней глубины"
+        ), game.getBoard().copy(), getCurrentPlayer().getPlayerId());
+    }
+
+    public List<AlgorithmReport> getHintsFromAllAlgorithms() {
+        if (game == null || game.isFinished()) {
+            return List.of();
+        }
+
+        int playerId = getCurrentPlayer().getPlayerId();
+        Board base = game.getBoard().copy();
+        List<Algorithm> algorithms = List.of(
+                new RandomAlgorithm(),
+                new MinimaxAlgorithm(),
+                new AlphaBetaAlgorithm(),
+                new MonteCarloAlgorithm()
         );
+        ComputerPlayerHardnessLevel hintHardness = getHintHardnessLevel();
+
+        List<AlgorithmReport> reports = new ArrayList<>();
+        for (Algorithm algorithm : algorithms) {
+            Move move = algorithm.getMove(
+                    base.copy(),
+                    hintHardness,
+                    playerId,
+                    game.getPlayer1().getAmountOfWallsLeft(),
+                    game.getPlayer2().getAmountOfWallsLeft()
+            );
+            AlgorithmReport report = algorithm.getLastReport();
+            if (report != null) {
+                reports.add(enrichReport(new AlgorithmReport(
+                        report.algorithm(),
+                        move,
+                        report.score(),
+                        report.reachedDepth(),
+                        report.nodesVisited(),
+                        report.consideredMoves(),
+                        report.cutoffs(),
+                        report.explanation()
+                ), base, playerId));
+            }
+        }
+        return reports;
+    }
+
+    private ComputerPlayerHardnessLevel getHintHardnessLevel() {
+        Player opponent = game.getCurrentPlayer() == 1 ? game.getPlayer2() : game.getPlayer1();
+        if (opponent instanceof ComputerPlayer computerPlayer) {
+            return computerPlayer.getHardnessLevel();
+        }
+        return ComputerPlayerHardnessLevel.MEDIUM;
     }
 
     public Player getCurrentPlayer() {
@@ -215,5 +251,23 @@ public class GameProcessor {
 
     public void replayLive() {
         replayIndex = null;
+    }
+
+    private AlgorithmReport enrichReport(AlgorithmReport report, Board before, int playerId) {
+        if (report == null) {
+            return null;
+        }
+        String explanation = report.explanation() + ". "
+                + boardAnalyzer.explainMove(before, report.move(), playerId, game.getGameSize().getAmountOfTilesPerSide());
+        return new AlgorithmReport(
+                report.algorithm(),
+                report.move(),
+                report.score(),
+                report.reachedDepth(),
+                report.nodesVisited(),
+                report.consideredMoves(),
+                report.cutoffs(),
+                explanation
+        );
     }
 }

@@ -1,12 +1,14 @@
 package ru.ac.uniyar.ui;
 
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.shared.Tooltip;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.router.Route;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
@@ -30,23 +32,29 @@ public class TournamentPageController extends VerticalLayout {
         title.getStyle().set("margin", "0 0 8px");
         ComboBox<String> algorithm1 = new ComboBox<>("ИИ P1");
         algorithm1.setItems(Arrays.stream(ComputerAlgorithmType.values()).map(ComputerAlgorithmType::getDescription).toList());
+        addTooltip(algorithm1, "Алгоритм первого участника турнира.");
 
         ComboBox<String> algorithm2 = new ComboBox<>("ИИ P2");
         algorithm2.setItems(Arrays.stream(ComputerAlgorithmType.values()).map(ComputerAlgorithmType::getDescription).toList());
+        addTooltip(algorithm2, "Алгоритм второго участника турнира.");
 
         ComboBox<String> hardness1 = new ComboBox<>("Сложность P1");
         hardness1.setItems(Arrays.stream(ComputerPlayerHardnessLevel.values()).map(ComputerPlayerHardnessLevel::getDescription).toList());
+        addTooltip(hardness1, "Глубина/интенсивность вычислений первого ИИ.");
 
         ComboBox<String> hardness2 = new ComboBox<>("Сложность P2");
         hardness2.setItems(Arrays.stream(ComputerPlayerHardnessLevel.values()).map(ComputerPlayerHardnessLevel::getDescription).toList());
+        addTooltip(hardness2, "Глубина/интенсивность вычислений второго ИИ.");
 
         ComboBox<String> size = new ComboBox<>("Размер поля");
         size.setItems(Arrays.stream(GameSize.values()).map(GameSize::getDescription).toList());
+        addTooltip(size, "Размер доски для всех партий турнира.");
 
         IntegerField games = new IntegerField("Количество партий");
         games.setValue(10);
         games.setMin(1);
         games.setMax(200);
+        addTooltip(games, "Сколько партий подряд сыграют выбранные ИИ.");
 
         Pre result = new Pre();
         result.setWidth("min(900px, 100%)");
@@ -96,6 +104,8 @@ public class TournamentPageController extends VerticalLayout {
             }, "quoridor-tournament").start();
         });
         Button back = new Button("Назад", e -> getUI().ifPresent(ui -> ui.navigate("start")));
+        addTooltip(run, "Запустить серию партий между двумя выбранными алгоритмами.");
+        addTooltip(back, "Вернуться к стартовому меню.");
 
         HorizontalLayout controls = new HorizontalLayout(algorithm1, algorithm2, hardness1, hardness2, size, games);
         controls.setWidth("min(900px, 100%)");
@@ -108,5 +118,12 @@ public class TournamentPageController extends VerticalLayout {
 
         HorizontalLayout buttons = new HorizontalLayout(run, back);
         add(title, controls, buttons, result);
+    }
+
+    private void addTooltip(Component component, String text) {
+        Tooltip.forComponent(component)
+                .withText(text)
+                .withHoverDelay(250)
+                .withFocusDelay(250);
     }
 }

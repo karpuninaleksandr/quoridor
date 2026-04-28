@@ -17,6 +17,7 @@ import ru.ac.uniyar.service.GameProcessor;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Route("/game")
@@ -26,14 +27,10 @@ public class GamePageController extends VerticalLayout {
     private final GameProcessor gameProcessor;
 
     private final Div boardGrid = new Div();
-    private final H1 turnLabel = new H1();
-    private final H1 wallsLabel = new H1();
     private final Button aiStepButton = new Button("Сделать ход ИИ");
-    private final Div reportPanel = new Div();
-    private final Div hintPanel = new Div();
-    private final Div historyPanel = new Div();
-    private final Div statisticsPanel = new Div();
-    private Move hintedMove;
+    private final GameInfoPanel infoPanel = new GameInfoPanel();
+    private final GameHistoryPanel historyPanel;
+    private List<AlgorithmReport> hintedReports = List.of();
 
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
@@ -59,18 +56,19 @@ public class GamePageController extends VerticalLayout {
             processTurn();
         });
         Button hintButton = new Button("Подсказка хода", e -> {
+            if (gameProcessor.getGame() == null) {
+                Notification.show("Сначала начните игру", 1000, Notification.Position.MIDDLE);
+                return;
+            }
             if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer) || gameProcessor.isReplayMode()) {
                 Notification.show("Подсказка доступна на ходе игрока", 1000, Notification.Position.MIDDLE);
                 return;
             }
-            AlgorithmReport hint = gameProcessor.getHintForCurrentPlayer();
-            hintedMove = hint == null ? null : hint.move();
-            hintPanel.setText(hint == null
-                    ? "Подсказка недоступна"
-                    : "Подсказка подсвечена на поле"
-                    + " | оценка: " + hint.score()
-                    + " | глубина: " + hint.reachedDepth()
-                    + " | узлы: " + hint.nodesVisited());
+            hintedReports = gameProcessor.getHintsFromAllAlgorithms();
+            if (hintedReports.isEmpty()) {
+                Notification.show("Подсказки недоступны", 1000, Notification.Position.MIDDLE);
+            }
+            infoPanel.setHintLegend(hintedReports, this::getAlgorithmColor);
             renderBoard();
         });
         Button replayPreviousButton = new Button("Назад по истории", e -> {
@@ -99,29 +97,7 @@ public class GamePageController extends VerticalLayout {
                 .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
                 .set("flex-wrap", "wrap");
 
-        styleInfoPanel(reportPanel);
-        styleInfoPanel(hintPanel);
-        styleInfoPanel(historyPanel);
-        styleInfoPanel(statisticsPanel);
-
-        Div leftColumn = new Div(turnLabel, wallsLabel, hintPanel, reportPanel, statisticsPanel);
-        leftColumn.getStyle()
-                .set("display", "flex")
-                .set("flex-direction", "column")
-                .set("gap", "12px")
-                .set("width", "300px")
-                .set("min-width", "260px");
-
-        HorizontalLayout replayControls = new HorizontalLayout(replayPreviousButton, replayNextButton, replayLiveButton);
-        replayControls.getStyle().set("flex-wrap", "wrap");
-
-        Div rightColumn = new Div(historyPanel, replayControls);
-        rightColumn.getStyle()
-                .set("display", "flex")
-                .set("flex-direction", "column")
-                .set("gap", "12px")
-                .set("width", "300px")
-                .set("min-width", "260px");
+        historyPanel = new GameHistoryPanel(replayPreviousButton, replayNextButton, replayLiveButton);
 
         Div boardColumn = new Div(boardGrid);
         boardColumn.getStyle()
@@ -131,7 +107,7 @@ public class GamePageController extends VerticalLayout {
                 .set("min-width", "0")
                 .set("overflow", "auto");
 
-        Div gameLayout = new Div(leftColumn, boardColumn, rightColumn);
+        Div gameLayout = new Div(infoPanel, boardColumn, historyPanel);
         gameLayout.setWidthFull();
         gameLayout.getStyle()
                 .set("display", "flex")
@@ -159,17 +135,18 @@ public class GamePageController extends VerticalLayout {
         if (game == null) return;
 
         if (game.isFinished()) {
-            turnLabel.setText("Игра окончена. Победил " + getWinnerText(game));
+            infoPanel.setTurnStatus("Игра окончена. Победил " + getWinnerText(game), 0);
+        } else if (gameProcessor.isReplayMode()) {
+            infoPanel.setTurnStatus("Просмотр хода #" + gameProcessor.getDisplayedMoveNumber(), 0);
         } else {
-            turnLabel.setText(gameProcessor.isReplayMode()
-                    ? "Просмотр хода #" + gameProcessor.getDisplayedMoveNumber()
-                    : "Ход игрока: P" + gameProcessor.getCurrentPlayer().getPlayerId());
+            infoPanel.setTurnStatus("Ходит игрок", gameProcessor.getCurrentPlayer().getPlayerId());
         }
 
         Player p1 = game.getPlayer1();
         Player p2 = game.getPlayer2();
 
-        wallsLabel.setText("Стены: P1=" + p1.getAmountOfWallsLeft() + " | P2=" + p2.getAmountOfWallsLeft());
+        infoPanel.setWallsCounts(p1.getAmountOfWallsLeft(), p2.getAmountOfWallsLeft());
+        infoPanel.setHintLegend(hintedReports, this::getAlgorithmColor);
         updateAiStepButton();
 
         renderReport();
@@ -220,12 +197,17 @@ public class GamePageController extends VerticalLayout {
                             .set("background", "white")
                             .set("font-weight", "700");
 
-                    if (pos.equals(board.getPositionOfPlayer1())) cell.setText("P1");
-                    if (pos.equals(board.getPositionOfPlayer2())) cell.setText("P2");
+                    if (pos.equals(board.getPositionOfPlayer1())) {
+                        renderPiece(cell, "P1", "#2563eb");
+                    }
+                    if (pos.equals(board.getPositionOfPlayer2())) {
+                        renderPiece(cell, "P2", "#dc2626");
+                    }
 
-                    if (isHintedMoveDestination(pos)) {
+                    List<AlgorithmReport> cellHints = getMoveHintsForPosition(pos);
+                    if (!cellHints.isEmpty()) {
                         cell.getStyle()
-                                .set("background", "#fde68a")
+                                .set("background", buildHintBackground(cellHints))
                                 .set("box-shadow", "inset 0 0 0 4px #f59e0b");
                     }
 
@@ -233,7 +215,7 @@ public class GamePageController extends VerticalLayout {
                         cell.getElement().addEventListener("mouseover", e ->
                                 cell.getStyle().set("background", "#a5d6a7"));
                         cell.getElement().addEventListener("mouseout", e ->
-                                cell.getStyle().set("background", isHintedMoveDestination(pos) ? "#fde68a" : "white"));
+                                cell.getStyle().set("background", cellHints.isEmpty() ? "white" : buildHintBackground(cellHints)));
                     }
 
                     cell.addClickListener(e -> {
@@ -248,7 +230,7 @@ public class GamePageController extends VerticalLayout {
                         gameProcessor.makeMove(
                                 Move.movePlayer(gameProcessor.getCurrentPlayer().getPlayerId(), pos)
                         );
-                        hintedMove = null;
+                        hintedReports = List.of();
 
                         renderBoard();
                         processTurn();
@@ -297,9 +279,14 @@ public class GamePageController extends VerticalLayout {
                                 && (middle != null && !middle.isRightMovementAvailable());
                     }
 
-                    if (isHintedWallCell(i, j)) {
+                    if (!horizontalGap && !verticalGap) {
+                        isWall = isWallCenter(board, i, j);
+                    }
+
+                    List<AlgorithmReport> wallHints = getWallHintsForCell(i, j);
+                    if (!wallHints.isEmpty()) {
                         cell.getStyle()
-                                .set("background", "#f59e0b")
+                                .set("background", buildHintBackground(wallHints))
                                 .set("box-shadow", "0 0 0 2px #92400e");
                     } else {
                         cell.getStyle().set("background", isWall ? "#7c2d12" : "#e5e7eb");
@@ -338,7 +325,7 @@ public class GamePageController extends VerticalLayout {
             return;
         }
 
-        hintedMove = null;
+        hintedReports = List.of();
         renderBoard();
         ui.access(this::processTurn);
     }
@@ -396,7 +383,7 @@ public class GamePageController extends VerticalLayout {
             }
 
             gameProcessor.makeComputerMove();
-            hintedMove = null;
+            hintedReports = List.of();
             renderBoard();
             processTurn();
         }
@@ -419,13 +406,12 @@ public class GamePageController extends VerticalLayout {
     }
 
     private void renderReport() {
-        reportPanel.removeAll();
         AlgorithmReport report = gameProcessor.getLastAiReport();
         if (report == null) {
-            reportPanel.setText("Ход ИИ еще не выполнен");
+            infoPanel.setReport("Ход ИИ еще не выполнен");
             return;
         }
-        reportPanel.setText(
+        infoPanel.setReport(
                 "ИИ: " + report.algorithm()
                         + " | ход: " + describeMove(report.move())
                         + " | оценка: " + report.score()
@@ -438,21 +424,13 @@ public class GamePageController extends VerticalLayout {
     }
 
     private void renderHistory() {
-        historyPanel.removeAll();
-        StringBuilder history = new StringBuilder("История ходов:\n");
-        List<Move> moves = gameProcessor.getMoveHistory();
-        for (int i = 0; i < moves.size(); ++i) {
-            history.append(i + 1).append(". ").append(describeMove(moves.get(i))).append("\n");
-        }
-        historyPanel.getStyle().set("white-space", "pre-line");
-        historyPanel.setText(history.toString());
+        historyPanel.render(gameProcessor.getMoveHistory());
     }
 
     private void renderStatistics() {
-        statisticsPanel.removeAll();
         Game game = gameProcessor.getGame();
         if (game == null) {
-            statisticsPanel.setText("Статистика появится после старта партии");
+            infoPanel.setStatistics("Статистика появится после старта партии");
             return;
         }
 
@@ -469,45 +447,120 @@ public class GamePageController extends VerticalLayout {
             statistics.append("партия идет");
         }
 
-        statisticsPanel.getStyle().set("white-space", "pre-line");
-        statisticsPanel.setText(statistics.toString());
+        infoPanel.setStatistics(statistics.toString());
     }
 
-    private void styleInfoPanel(Div panel) {
-        panel.setWidthFull();
-        panel.getStyle()
-                .set("background", "white")
-                .set("padding", "12px 14px")
-                .set("border-radius", "8px")
-                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
-                .set("box-sizing", "border-box");
-        if (panel == historyPanel) {
-            panel.getStyle()
-                    .set("height", "560px")
-                    .set("max-height", "560px")
-                    .set("overflow", "auto");
+    private void renderPiece(Div cell, String text, String color) {
+        Div piece = new Div();
+        piece.setText(text);
+        piece.getStyle()
+                .set("width", "34px")
+                .set("height", "34px")
+                .set("border-radius", "50%")
+                .set("background", color)
+                .set("color", "white")
+                .set("display", "flex")
+                .set("align-items", "center")
+                .set("justify-content", "center")
+                .set("font-size", "13px")
+                .set("font-weight", "700")
+                .set("box-shadow", "0 4px 10px rgba(15, 23, 42, 0.28)");
+        cell.add(piece);
+    }
+
+    private List<AlgorithmReport> getMoveHintsForPosition(Position position) {
+        List<AlgorithmReport> result = new ArrayList<>();
+        for (AlgorithmReport report : hintedReports) {
+            Move move = report.move();
+            if (move != null
+                    && move.getMoveType() == ru.ac.uniyar.model.enums.MoveType.MOVE_PLAYER
+                    && position.equals(move.getEndPosition())) {
+                result.add(report);
+            }
         }
+        return result;
     }
 
-    private boolean isHintedMoveDestination(Position position) {
-        return hintedMove != null
-                && hintedMove.getMoveType() == ru.ac.uniyar.model.enums.MoveType.MOVE_PLAYER
-                && position.equals(hintedMove.getEndPosition());
-    }
-
-    private boolean isHintedWallCell(int renderRow, int renderCol) {
-        if (hintedMove == null || hintedMove.getMoveType() != ru.ac.uniyar.model.enums.MoveType.PLACE_WALL) {
-            return false;
+    private List<AlgorithmReport> getWallHintsForCell(int renderRow, int renderCol) {
+        List<AlgorithmReport> result = new ArrayList<>();
+        for (AlgorithmReport report : hintedReports) {
+            Move move = report.move();
+            if (move != null
+                    && move.getMoveType() == ru.ac.uniyar.model.enums.MoveType.PLACE_WALL
+                    && isRenderCellPartOfWall(renderRow, renderCol, move.getStartPosition(), move.getEndPosition())) {
+                result.add(report);
+            }
         }
-        Position[] wall = gameProcessor.extractWall(renderRow, renderCol);
-        if (wall == null) {
-            return false;
-        }
-        return sameWall(wall[0], wall[1], hintedMove.getStartPosition(), hintedMove.getEndPosition());
+        return result;
     }
 
-    private boolean sameWall(Position start1, Position end1, Position start2, Position end2) {
-        return (start1.equals(start2) && end1.equals(end2)) || (start1.equals(end2) && end1.equals(start2));
+    private boolean isRenderCellPartOfWall(int renderRow, int renderCol, Position start, Position end) {
+        int row1 = start.row();
+        int col1 = start.col();
+        int row2 = end.row();
+        int col2 = end.col();
+
+        if (row1 == row2 && Math.abs(col1 - col2) == 1) {
+            int wallRow = row1 * 2 + 1;
+            int firstCol = Math.min(col1, col2) * 2;
+            return renderRow == wallRow && renderCol >= firstCol && renderCol <= firstCol + 2;
+        }
+
+        if (col1 == col2 && Math.abs(row1 - row2) == 1) {
+            int wallCol = col1 * 2 + 1;
+            int firstRow = Math.min(row1, row2) * 2;
+            return renderCol == wallCol && renderRow >= firstRow && renderRow <= firstRow + 2;
+        }
+
+        return false;
+    }
+
+    private boolean isWallCenter(Board board, int renderRow, int renderCol) {
+        int row = renderRow / 2;
+        int col = renderCol / 2;
+
+        BoardTile topLeft = board.getTiles().get(new Position(row, col));
+        BoardTile topRight = board.getTiles().get(new Position(row, col + 1));
+        BoardTile bottomLeft = board.getTiles().get(new Position(row + 1, col));
+
+        boolean horizontalWall = topLeft != null
+                && topRight != null
+                && !topLeft.isBackwardsMovementAvailable()
+                && !topRight.isBackwardsMovementAvailable();
+        boolean verticalWall = topLeft != null
+                && bottomLeft != null
+                && !topLeft.isRightMovementAvailable()
+                && !bottomLeft.isRightMovementAvailable();
+
+        return horizontalWall || verticalWall;
+    }
+
+    private String buildHintBackground(List<AlgorithmReport> reports) {
+        if (reports.size() == 1) {
+            return getAlgorithmColor(reports.get(0).algorithm());
+        }
+        StringBuilder gradient = new StringBuilder("linear-gradient(90deg");
+        for (int i = 0; i < reports.size(); ++i) {
+            int from = i * 100 / reports.size();
+            int to = (i + 1) * 100 / reports.size();
+            String color = getAlgorithmColor(reports.get(i).algorithm());
+            gradient.append(", ").append(color).append(" ").append(from).append("% ").append(to).append("%");
+        }
+        gradient.append(")");
+        return gradient.toString();
+    }
+
+    private String getAlgorithmColor(String algorithm) {
+        if (algorithm.contains("MiniMax")) {
+            return "#60a5fa";
+        }
+        if (algorithm.contains("AlphaBeta")) {
+            return "#f59e0b";
+        }
+        if (algorithm.contains("MonteCarlo")) {
+            return "#34d399";
+        }
+        return "#f472b6";
     }
 
     private String getWinnerText(Game game) {

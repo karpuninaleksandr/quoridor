@@ -2,20 +2,26 @@ package ru.ac.uniyar.service;
 
 import org.springframework.stereotype.Service;
 import ru.ac.uniyar.model.*;
+import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
 import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.players.ComputerPlayer;
 import ru.ac.uniyar.model.players.ComputerPlayerFabric;
 import ru.ac.uniyar.model.players.Player;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 @Service
 public class TournamentService {
     private final ComputerPlayerFabric computerPlayerFabric;
+    private final BoardFactory boardFactory;
 
-    public TournamentService(ComputerPlayerFabric computerPlayerFabric) {
+    public TournamentService(ComputerPlayerFabric computerPlayerFabric, BoardFactory boardFactory) {
         this.computerPlayerFabric = computerPlayerFabric;
+        this.boardFactory = boardFactory;
     }
 
     public String runTournament(String algorithm1, String algorithm2, String hardness, GameSize gameSize, int games) {
@@ -79,6 +85,79 @@ public class TournamentService {
         return summary;
     }
 
+    public List<AlgorithmComparisonResult> compareAlgorithms(String hardness1, String hardness2,
+                                                             GameSize gameSize, int games,
+                                                             Consumer<String> logger) {
+        Map<String, String> hardnessByAlgorithm = Map.of(
+                ComputerAlgorithmType.RANDOM.getDescription(), hardness1,
+                ComputerAlgorithmType.MINIMAX.getDescription(), hardness1,
+                ComputerAlgorithmType.MONTECARLO.getDescription(), hardness2,
+                ComputerAlgorithmType.ALPHABETA.getDescription(), hardness2
+        );
+        return compareAlgorithms(hardnessByAlgorithm, gameSize, games, logger);
+    }
+
+    public List<AlgorithmComparisonResult> compareAlgorithms(Map<String, String> hardnessByAlgorithm,
+                                                             GameSize gameSize, int games,
+                                                             Consumer<String> logger) {
+        List<AlgorithmComparisonResult> results = new ArrayList<>();
+        ComputerAlgorithmType[] algorithms = ComputerAlgorithmType.values();
+        int totalPairs = algorithms.length * (algorithms.length - 1) / 2;
+        int pairNumber = 0;
+
+        for (int firstIndex = 0; firstIndex < algorithms.length; ++firstIndex) {
+            for (int secondIndex = firstIndex + 1; secondIndex < algorithms.length; ++secondIndex) {
+                ComputerAlgorithmType first = algorithms[firstIndex];
+                ComputerAlgorithmType second = algorithms[secondIndex];
+                pairNumber++;
+                logger.accept("Сравнение " + pairNumber + "/" + totalPairs + ": "
+                        + first.getDescription() + " vs " + second.getDescription());
+                results.add(runComparisonPair(
+                        first.getDescription(),
+                        second.getDescription(),
+                        hardnessByAlgorithm.get(first.getDescription()),
+                        hardnessByAlgorithm.get(second.getDescription()),
+                        gameSize,
+                        games
+                ));
+            }
+        }
+        return results;
+    }
+
+    private AlgorithmComparisonResult runComparisonPair(String algorithm1, String algorithm2,
+                                                        String hardness1, String hardness2,
+                                                        GameSize gameSize, int games) {
+        int wins1 = 0;
+        int wins2 = 0;
+        int draws = 0;
+        int totalMoves = 0;
+
+        for (int i = 0; i < games; ++i) {
+            Game game = createGame(algorithm1, algorithm2, hardness1, hardness2, gameSize, i % 2 == 0 ? 1 : 2);
+            int winner = play(game, 300, ignored -> {
+            }, i + 1, games, games - i - 1);
+            totalMoves += game.getAmountOfMoves();
+            if (winner == 1) {
+                wins1++;
+            } else if (winner == 2) {
+                wins2++;
+            } else {
+                draws++;
+            }
+        }
+
+        return new AlgorithmComparisonResult(
+                algorithm1,
+                algorithm2,
+                games,
+                wins1,
+                wins2,
+                draws,
+                games == 0 ? 0 : totalMoves * 1.0 / games
+        );
+    }
+
     private Game createGame(String algorithm1, String algorithm2, String hardness1, String hardness2,
                             GameSize gameSize, int firstPlayer) {
         Player player1 = computerPlayerFabric.getComputerPlayer(algorithm1, hardness1);
@@ -89,29 +168,7 @@ public class TournamentService {
         player2.setPlayerId(2);
         player2.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
 
-        return new Game(gameSize, initBoard(gameSize), player1, player2, firstPlayer, Instant.now(), 0, false);
-    }
-
-    private Board initBoard(GameSize gameSize) {
-        Board board = new Board();
-        int size = gameSize.getAmountOfTilesPerSide();
-
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < size; ++j) {
-                board.getTiles().put(new Position(i, j), new BoardTile(
-                        j != 0,
-                        i != 0,
-                        j != size - 1,
-                        i != size - 1
-                ));
-            }
-        }
-
-        int mid = (size - 1) / 2;
-        board.setPositionOfPlayer1(new Position(size - 1, mid));
-        board.setPositionOfPlayer2(new Position(0, mid));
-
-        return board;
+        return new Game(gameSize, boardFactory.create(gameSize), player1, player2, firstPlayer, Instant.now(), 0, false);
     }
 
     private int play(Game game, int moveLimit, Consumer<String> logger, int gameNumber, int totalGames,

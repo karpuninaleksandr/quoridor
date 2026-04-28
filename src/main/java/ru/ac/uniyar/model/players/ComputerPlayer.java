@@ -1,5 +1,6 @@
 package ru.ac.uniyar.model.players;
 
+import lombok.Getter;
 import lombok.Setter;
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
@@ -9,6 +10,7 @@ import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
 
 //реализация интерфейса Player для компьютера - методы будут ожидать выполнения его алгоритма
 @Setter
+@Getter
 public class ComputerPlayer extends Player {
     private Algorithm algorithm;
     private ComputerPlayerHardnessLevel hardnessLevel;
