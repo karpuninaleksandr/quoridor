@@ -102,18 +102,18 @@ public class MonteCarloAlgorithm implements Algorithm {
 
     private int getRolloutDepth(ComputerPlayerHardnessLevel level, int size) {
         return switch (level) {
-            case EASY -> size * 3;
-            case MEDIUM -> size * 5;
-            case HARD -> size * 8;
+            case EASY -> size * 4;
+            case MEDIUM -> size * 7;
+            case HARD -> size * 10;
         };
     }
 
     private long getIterationBudget(ComputerPlayerHardnessLevel level, int size) {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
         return switch (level) {
-            case EASY -> largeBoard ? 250L : 350L;
-            case MEDIUM -> largeBoard ? 800L : 1100L;
-            case HARD -> largeBoard ? 1700L : 2400L;
+            case EASY -> largeBoard ? 380L : 520L;
+            case MEDIUM -> largeBoard ? 1300L : 1700L;
+            case HARD -> largeBoard ? 2600L : 3400L;
         };
     }
 
@@ -121,9 +121,9 @@ public class MonteCarloAlgorithm implements Algorithm {
     public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
         return switch (level) {
-            case EASY -> largeBoard ? 800L : 650L;
-            case MEDIUM -> largeBoard ? 2500L : 1900L;
-            case HARD -> largeBoard ? 5200L : 4200L;
+            case EASY -> largeBoard ? 1200L : 950L;
+            case MEDIUM -> largeBoard ? 3800L : 2900L;
+            case HARD -> largeBoard ? 7600L : 6200L;
         };
     }
 

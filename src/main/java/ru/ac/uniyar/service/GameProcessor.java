@@ -10,6 +10,8 @@ import ru.ac.uniyar.model.algorithms.AlphaBetaAlgorithm;
 import ru.ac.uniyar.model.algorithms.MinimaxAlgorithm;
 import ru.ac.uniyar.model.algorithms.MonteCarloAlgorithm;
 import ru.ac.uniyar.model.algorithms.RandomAlgorithm;
+import ru.ac.uniyar.model.algorithms.EvaluationLearningSample;
+import ru.ac.uniyar.model.algorithms.EvaluationWeightsStore;
 import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.algorithms.AlgorithmReport;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
@@ -39,6 +41,7 @@ public class GameProcessor {
     private Game game;
     private final List<Move> moveHistory = new ArrayList<>();
     private final List<Board> boardHistory = new ArrayList<>();
+    private final List<EvaluationLearningSample> learningSamples = new ArrayList<>();
     private Integer replayIndex;
     private AlgorithmReport lastAiReport;
 
@@ -72,6 +75,7 @@ public class GameProcessor {
         game.setCurrentPlayer(Math.random() > 0.5 ? 1 : 2);
         moveHistory.clear();
         boardHistory.clear();
+        learningSamples.clear();
         boardHistory.add(board.copy());
         replayIndex = null;
         lastAiReport = null;
@@ -83,6 +87,7 @@ public class GameProcessor {
         game.applyMove(move);
         moveHistory.add(move);
         boardHistory.add(game.getBoard().copy());
+        learnFromFinishedGame();
         game.setCurrentPlayer(game.getCurrentPlayer() == 1 ? 2 : 1);
     }
 
@@ -105,8 +110,29 @@ public class GameProcessor {
         lastAiReport = enrichReport(adjustReportForFallback(rawReport, move, legalMove), before, computerPlayer.getPlayerId());
 
         if (legalMove != null) {
+            EvaluationLearningSample sample = computerPlayer.getAlgorithm().buildLearningSample(
+                    before,
+                    legalMove,
+                    computerPlayer.getPlayerId(),
+                    game.getGameSize().getAmountOfTilesPerSide(),
+                    game.getPlayer1().getAmountOfWallsLeft(),
+                    game.getPlayer2().getAmountOfWallsLeft()
+            );
+            if (sample != null) {
+                learningSamples.add(sample);
+            }
             makeMove(legalMove);
         }
+    }
+
+    private void learnFromFinishedGame() {
+        if (!game.isFinished() || learningSamples.isEmpty()) {
+            return;
+        }
+
+        int winnerId = game.isWonBy(1) ? 1 : 2;
+        EvaluationWeightsStore.learnFromGame(learningSamples, winnerId);
+        learningSamples.clear();
     }
 
     public List<AlgorithmReport> getHintsFromAllAlgorithms() {

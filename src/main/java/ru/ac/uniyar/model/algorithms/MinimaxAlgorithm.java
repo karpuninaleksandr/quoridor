@@ -102,9 +102,9 @@ public class MinimaxAlgorithm implements Algorithm {
         boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
         return switch (level) {
-            case EASY -> 2;
-            case MEDIUM -> smallBoard ? 4 : 3;
-            case HARD -> largeBoard ? 3 : 4;
+            case EASY -> 3;
+            case MEDIUM -> smallBoard ? 5 : 4;
+            case HARD -> largeBoard ? 4 : 5;
         };
     }
 
@@ -112,9 +112,9 @@ public class MinimaxAlgorithm implements Algorithm {
     public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
         return switch (level) {
-            case EASY -> largeBoard ? 500L : 400L;
-            case MEDIUM -> largeBoard ? 1100L : 900L;
-            case HARD -> largeBoard ? 1900L : 1600L;
+            case EASY -> largeBoard ? 900L : 700L;
+            case MEDIUM -> largeBoard ? 2200L : 1800L;
+            case HARD -> largeBoard ? 4200L : 3600L;
         };
     }
 

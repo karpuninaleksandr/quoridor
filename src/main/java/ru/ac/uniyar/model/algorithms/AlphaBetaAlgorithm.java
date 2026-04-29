@@ -113,9 +113,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
         boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
         return switch (level) {
-            case EASY -> smallBoard ? 4 : 3;
-            case MEDIUM -> smallBoard ? 6 : 5;
-            case HARD -> largeBoard ? 6 : 7;
+            case EASY -> smallBoard ? 5 : 4;
+            case MEDIUM -> smallBoard ? 7 : 6;
+            case HARD -> largeBoard ? 7 : 8;
         };
     }
 
@@ -124,9 +124,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
         boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
         return switch (level) {
-            case EASY -> smallBoard ? 700L : 900L;
-            case MEDIUM -> largeBoard ? 3200L : 2400L;
-            case HARD -> largeBoard ? 6500L : 5000L;
+            case EASY -> smallBoard ? 1000L : 1300L;
+            case MEDIUM -> largeBoard ? 4800L : 3600L;
+            case HARD -> largeBoard ? 9500L : 7600L;
         };
     }
 

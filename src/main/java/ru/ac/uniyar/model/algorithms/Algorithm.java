@@ -354,46 +354,68 @@ public interface Algorithm {
             return terminal;
         }
 
+        return evaluationFeatures(board, playerId, size, wallsLeft1, wallsLeft2)
+                .score(EvaluationWeightsStore.current());
+    }
+
+    default EvaluationFeatures evaluationFeatures(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         int myDist = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
         int enemyDist = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
 
-        int score = (enemyDist - myDist) * 65;
-        score += endgameDistanceScore(myDist, enemyDist);
-
-        score += board.getAvailableMoves(getCurrentPosition(board, playerId)).size() * 4;
-        score -= board.getAvailableMoves(getCurrentPosition(board, 3 - playerId)).size() * 3;
-
         int myWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
         int enemyWalls = playerId == 1 ? wallsLeft2 : wallsLeft1;
-        int wallWeight = enemyDist <= 4 ? 24 : 14;
-        score += myWalls * wallWeight - enemyWalls * 10;
 
         int myRow = getCurrentPosition(board, playerId).row();
         int enemyRow = getCurrentPosition(board, 3 - playerId).row();
-        score += playerId == 1 ? (size - 1 - myRow) * 6 : myRow * 6;
-        score -= playerId == 1 ? enemyRow * 6 : (size - 1 - enemyRow) * 6;
+        int myProgress = playerId == 1 ? size - 1 - myRow : myRow;
+        int enemyProgress = playerId == 1 ? enemyRow : size - 1 - enemyRow;
 
-        return score;
+        return new EvaluationFeatures(
+                enemyDist - myDist,
+                board.getAvailableMoves(getCurrentPosition(board, playerId)).size(),
+                -board.getAvailableMoves(getCurrentPosition(board, 3 - playerId)).size(),
+                myWalls - enemyWalls,
+                myProgress - enemyProgress,
+                endgameFeature(myDist),
+                -endgameFeature(enemyDist)
+        );
     }
 
-    default int endgameDistanceScore(int myDist, int enemyDist) {
-        int score = 0;
-        if (myDist <= 1) {
-            score += 1600;
-        } else if (myDist == 2) {
-            score += 520;
-        } else if (myDist == 3) {
-            score += 180;
+    default EvaluationLearningSample buildLearningSample(Board before, Move move, int playerId,
+                                                         int size, int wallsLeft1, int wallsLeft2) {
+        if (move == null) {
+            return null;
         }
 
-        if (enemyDist <= 1) {
-            score -= 2100;
-        } else if (enemyDist == 2) {
-            score -= 700;
-        } else if (enemyDist == 3) {
-            score -= 240;
+        EvaluationFeatures beforeFeatures = evaluationFeatures(before, playerId, size, wallsLeft1, wallsLeft2);
+        Board after = before.copy();
+        applyMove(after, move);
+
+        int newWallsLeft1 = wallsLeft1;
+        int newWallsLeft2 = wallsLeft2;
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            if (move.getPlayerId() == 1) {
+                --newWallsLeft1;
+            } else {
+                --newWallsLeft2;
+            }
         }
-        return score;
+
+        EvaluationFeatures afterFeatures = evaluationFeatures(after, playerId, size, newWallsLeft1, newWallsLeft2);
+        return new EvaluationLearningSample(playerId, beforeFeatures, afterFeatures);
+    }
+
+    default int endgameFeature(int myDist) {
+        if (myDist <= 1) {
+            return 10;
+        }
+        if (myDist == 2) {
+            return 4;
+        }
+        if (myDist == 3) {
+            return 1;
+        }
+        return 0;
     }
 
     default int calculateShortestPath(Board board, Position start, int targetRow) {
