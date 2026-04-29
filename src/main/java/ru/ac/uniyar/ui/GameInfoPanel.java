@@ -50,10 +50,6 @@ public class GameInfoPanel extends Div {
         add(turnPanel, wallsPanel, hintPanel, reportPanel, statisticsPanel, actionsPanel);
     }
 
-    public void setTurn(String text) {
-        setTurnStatus(text, 0);
-    }
-
     public void setTurnStatus(String text, int playerId) {
         turnPanel.removeAll();
         Div label = new Div();
@@ -84,10 +80,6 @@ public class GameInfoPanel extends Div {
                 .set("gap", "10px");
     }
 
-    public void setWalls(String text) {
-        wallsPanel.setText(text);
-    }
-
     public void setWallsCounts(int walls1, int walls2) {
         wallsPanel.removeAll();
         wallsPanel.add(createWallCounter("P1", walls1, "#2563eb"), createWallCounter("P2", walls2, "#dc2626"));
@@ -95,11 +87,6 @@ public class GameInfoPanel extends Div {
                 .set("display", "grid")
                 .set("grid-template-columns", "1fr 1fr")
                 .set("gap", "10px");
-    }
-
-    public void setHint(String text) {
-        hintPanel.getStyle().set("white-space", "pre-line");
-        hintPanel.setText(text);
     }
 
     public void setHintLegend(List<AlgorithmReport> reports, Function<String, String> colorProvider) {
@@ -123,10 +110,6 @@ public class GameInfoPanel extends Div {
         for (AlgorithmReport report : reports) {
             addAlgorithmColorRow(report.algorithm(), colorProvider.apply(report.algorithm()));
         }
-    }
-
-    public void setReport(String text) {
-        reportPanel.setText(text);
     }
 
     public void setReport(AlgorithmReport report, String moveDescription) {
@@ -175,20 +158,6 @@ public class GameInfoPanel extends Div {
     public void setStatistics(String text) {
         statisticsPanel.getStyle().set("white-space", "pre-line");
         statisticsPanel.setText(text);
-    }
-
-    public void setActions(com.vaadin.flow.component.Component... actions) {
-        actionsPanel.removeAll();
-        if (actions.length == 0) {
-            actionsPanel.getStyle().set("display", "none");
-            return;
-        }
-        actionsPanel.getStyle()
-                .set("display", "flex")
-                .set("justify-content", "flex-start")
-                .set("flex-wrap", "wrap")
-                .set("gap", "8px");
-        actionsPanel.add(actions);
     }
 
     private void styleInfoPanel(Div panel) {

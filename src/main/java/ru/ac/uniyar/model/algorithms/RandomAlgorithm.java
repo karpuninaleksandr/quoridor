@@ -49,9 +49,6 @@ public class RandomAlgorithm implements Algorithm {
 
         Move result;
         switch (hardnessLevel) {
-            case EASY -> {
-                result = moves.get(random.nextInt(moves.size()));
-            }
             case MEDIUM -> {
                 moves.sort((a, b) -> Integer.compare(
                         evaluateAfterMove(board, b, playerId, wallsLeft1, wallsLeft2),

@@ -146,10 +146,10 @@ public class Board {
             return;
         }
 
-        addDiagonalJumps(result, next, rowDelta, colDelta);
+        addDiagonalJumps(result, next, rowDelta);
     }
 
-    private void addDiagonalJumps(List<Position> result, Position opponent, int rowDelta, int colDelta) {
+    private void addDiagonalJumps(List<Position> result, Position opponent, int rowDelta) {
         if (rowDelta != 0) {
             addDiagonalJump(result, opponent, 0, -1);
             addDiagonalJump(result, opponent, 0, 1);

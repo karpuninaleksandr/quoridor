@@ -26,16 +26,6 @@ public class TournamentService {
         this.boardFactory = boardFactory;
     }
 
-    public String runTournament(String algorithm1, String algorithm2, String hardness, GameSize gameSize, int games) {
-        return runTournament(algorithm1, algorithm2, hardness, hardness, gameSize, games, ignored -> {
-        });
-    }
-
-    public String runTournament(String algorithm1, String algorithm2, String hardness, GameSize gameSize,
-                                int games, Consumer<String> logger) {
-        return runTournament(algorithm1, algorithm2, hardness, hardness, gameSize, games, logger);
-    }
-
     public String runTournament(String algorithm1, String algorithm2, String hardness1, String hardness2,
                                 GameSize gameSize, int games, Consumer<String> logger) {
         int wins1 = 0;
@@ -85,18 +75,6 @@ public class TournamentService {
                 + "\nСредняя длина партии: " + (games == 0 ? 0 : totalMoves * 1.0 / games);
         logger.accept("Итог:\n" + summary);
         return summary;
-    }
-
-    public List<AlgorithmComparisonResult> compareAlgorithms(String hardness1, String hardness2,
-                                                             GameSize gameSize, int games,
-                                                             Consumer<String> logger) {
-        Map<String, String> hardnessByAlgorithm = Map.of(
-                ComputerAlgorithmType.RANDOM.getDescription(), hardness1,
-                ComputerAlgorithmType.MINIMAX.getDescription(), hardness1,
-                ComputerAlgorithmType.MONTECARLO.getDescription(), hardness2,
-                ComputerAlgorithmType.ALPHABETA.getDescription(), hardness2
-        );
-        return compareAlgorithms(hardnessByAlgorithm, gameSize, games, logger);
     }
 
     public List<AlgorithmComparisonResult> compareAlgorithms(Map<String, String> hardnessByAlgorithm,
@@ -192,7 +170,7 @@ public class TournamentService {
         while (!game.isFinished() && game.getAmountOfMoves() < moveLimit) {
             Player player = game.getCurrentPlayer() == 1 ? game.getPlayer1() : game.getPlayer2();
             ((ComputerPlayer) player).getAlgorithm().setRecentPositions(recentPositions.get(player.getPlayerId()));
-            Move move = ((ComputerPlayer) player).getMove(
+            Move move = player.getMove(
                     game.getBoard(),
                     player.getPlayerId(),
                     game.getPlayer1().getAmountOfWallsLeft(),

@@ -370,7 +370,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
                           int wallsLeft1, int wallsLeft2, int ply, Move tableBestMove) {
         int score = 0;
 
-        if (tableBestMove != null && move.equals(tableBestMove)) {
+        if (move.equals(tableBestMove)) {
             score += 20000;
         }
 

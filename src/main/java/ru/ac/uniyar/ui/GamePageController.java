@@ -30,8 +30,6 @@ public class GamePageController extends VerticalLayout {
     private final Button aiStepButton = new Button("Сделать ход ИИ");
     private final GameInfoPanel infoPanel = new GameInfoPanel();
     private final GameHistoryPanel historyPanel;
-    private final Button hintButton = new Button("Подсказка хода");
-    private final Button restartButton = new Button("Начать сначала");
     private List<AlgorithmReport> hintedReports = List.of();
     private int tileSizePx = 50;
     private int gapSizePx = 10;
@@ -47,6 +45,7 @@ public class GamePageController extends VerticalLayout {
                 .set("height", "100vh")
                 .set("overflow", "hidden");
 
+        Button restartButton = new Button("Начать сначала");
         restartButton.addClickListener(e -> UI.getCurrent().navigate("start"));
         aiStepButton.addClickListener(e -> {
             if (gameProcessor.getGame() == null || gameProcessor.getGame().isFinished()) {
@@ -60,22 +59,7 @@ public class GamePageController extends VerticalLayout {
             renderBoard();
             processTurn();
         });
-        hintButton.addClickListener(e -> {
-            if (gameProcessor.getGame() == null) {
-                Notification.show("Сначала начните игру", 1000, Notification.Position.MIDDLE);
-                return;
-            }
-            if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer) || gameProcessor.isReplayMode()) {
-                Notification.show("Подсказка доступна на ходе игрока", 1000, Notification.Position.MIDDLE);
-                return;
-            }
-            hintedReports = gameProcessor.getHintsFromAllAlgorithms();
-            if (hintedReports.isEmpty()) {
-                Notification.show("Подсказки недоступны", 1000, Notification.Position.MIDDLE);
-            }
-            infoPanel.setHintLegend(hintedReports, this::getAlgorithmColor);
-            renderBoard();
-        });
+        Button hintButton = getHintButton(gameProcessor);
         Button replayPreviousButton = new Button("←", e -> {
             gameProcessor.replayPrevious();
             renderBoard();
@@ -133,6 +117,27 @@ public class GamePageController extends VerticalLayout {
 
         add(title);
         add(gameLayout);
+    }
+
+    private Button getHintButton(GameProcessor gameProcessor) {
+        Button hintButton = new Button("Подсказка хода");
+        hintButton.addClickListener(e -> {
+            if (gameProcessor.getGame() == null) {
+                Notification.show("Сначала начните игру", 1000, Notification.Position.MIDDLE);
+                return;
+            }
+            if (!(gameProcessor.getCurrentPlayer() instanceof HumanPlayer) || gameProcessor.isReplayMode()) {
+                Notification.show("Подсказка доступна на ходе игрока", 1000, Notification.Position.MIDDLE);
+                return;
+            }
+            hintedReports = gameProcessor.getHintsFromAllAlgorithms();
+            if (hintedReports.isEmpty()) {
+                Notification.show("Подсказки недоступны", 1000, Notification.Position.MIDDLE);
+            }
+            infoPanel.setHintLegend(hintedReports, this::getAlgorithmColor);
+            renderBoard();
+        });
+        return hintButton;
     }
 
     @Override
@@ -405,7 +410,7 @@ public class GamePageController extends VerticalLayout {
         if (game == null) return;
         if (gameProcessor.isReplayMode()) return;
 
-        if (game != null && game.isFinished()) {
+        if (game.isFinished()) {
             renderBoard();
             return;
         }

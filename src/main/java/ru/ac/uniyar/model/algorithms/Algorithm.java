@@ -314,7 +314,7 @@ public interface Algorithm {
         return myDist <= 2 || enemyDist <= 2;
     }
 
-    default List<Move> getQuiescenceMoves(Board board, int currentPlayer, int wallsLeft, int rootPlayerId, int size) {
+    default List<Move> getQuiescenceMoves(Board board, int currentPlayer, int wallsLeft, int ignoredRootPlayerId, int size) {
         List<Move> moves = new ArrayList<>();
         Position current = getCurrentPosition(board, currentPlayer);
         for (Position next : board.getAvailableMoves(current)) {

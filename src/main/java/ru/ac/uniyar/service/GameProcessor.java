@@ -42,10 +42,6 @@ public class GameProcessor {
     private Integer replayIndex;
     private AlgorithmReport lastAiReport;
 
-    public void startNewGame(String sizeDescription, String typeOfPlayer1, String typeOfPlayer2, String gameHardness) {
-        startNewGame(sizeDescription, typeOfPlayer1, typeOfPlayer2, gameHardness, gameHardness);
-    }
-
     public void startNewGame(String sizeDescription, String typeOfPlayer1, String typeOfPlayer2,
                              String hardness1, String hardness2) {
         GameSize gameSize = GameSize.findByDescription(sizeDescription);
@@ -90,9 +86,9 @@ public class GameProcessor {
         game.setCurrentPlayer(game.getCurrentPlayer() == 1 ? 2 : 1);
     }
 
-    public Move makeComputerMove() {
+    public void makeComputerMove() {
         if (!(getCurrentPlayer() instanceof ComputerPlayer computerPlayer)) {
-            return null;
+            return;
         }
 
         Board before = game.getBoard().copy();
@@ -111,38 +107,6 @@ public class GameProcessor {
         if (legalMove != null) {
             makeMove(legalMove);
         }
-        return legalMove;
-    }
-
-    public AlgorithmReport getHintForCurrentPlayer() {
-        if (game == null || game.isFinished()) {
-            return null;
-        }
-
-        AlphaBetaAlgorithm advisor = new AlphaBetaAlgorithm();
-        Move move = advisor.getMove(
-                game.getBoard().copy(),
-                getHintHardnessLevel(),
-                getCurrentPlayer().getPlayerId(),
-                game.getPlayer1().getAmountOfWallsLeft(),
-                game.getPlayer2().getAmountOfWallsLeft()
-        );
-        AlgorithmReport report = advisor.getLastReport();
-        if (report == null) {
-            return null;
-        }
-        return enrichReport(new AlgorithmReport(
-                "Подсказка: " + report.algorithm(),
-                move,
-                report.score(),
-                report.reachedDepth(),
-                report.nodesVisited(),
-                report.consideredMoves(),
-                report.cutoffs(),
-                report.tableHits(),
-                report.timeMs(),
-                "Советник использует AlphaBeta средней глубины"
-        ), game.getBoard().copy(), getCurrentPlayer().getPlayerId());
     }
 
     public List<AlgorithmReport> getHintsFromAllAlgorithms() {
@@ -198,12 +162,6 @@ public class GameProcessor {
 
     public Player getCurrentPlayer() {
         return game.getCurrentPlayer() == 1 ? game.getPlayer1() : game.getPlayer2();
-    }
-
-    public boolean canPlaceWall(int i1, int j1, int i2, int j2) {
-        if (game == null) return false;
-
-        return canPlaceWall(new Position(i1, j1), new Position(i2, j2));
     }
 
     public boolean canPlaceWall(Position start, Position end) {
