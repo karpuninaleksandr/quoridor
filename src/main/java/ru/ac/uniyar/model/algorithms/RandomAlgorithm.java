@@ -23,6 +23,7 @@ public class RandomAlgorithm implements Algorithm {
 
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
+        long startedAt = System.currentTimeMillis();
         int amountOfWallsLeft = playerId == 1 ? wallsLeft1 : wallsLeft2;
         List<Move> moves = getMoves(board, playerId, amountOfWallsLeft);
 
@@ -53,7 +54,9 @@ public class RandomAlgorithm implements Algorithm {
         }
         lastReport = new AlgorithmReport(getType().getDescription(), result,
                 evaluateAfterMove(board, result, playerId, wallsLeft1, wallsLeft2),
-                1, moves.size(), moves.size(), 0, describeHardness(hardnessLevel));
+                1, moves.size(), moves.size(), 0, 0,
+                System.currentTimeMillis() - startedAt,
+                describeHardness(hardnessLevel));
         return result;
     }
 

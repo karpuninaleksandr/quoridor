@@ -30,7 +30,11 @@ public class GamePageController extends VerticalLayout {
     private final Button aiStepButton = new Button("Сделать ход ИИ");
     private final GameInfoPanel infoPanel = new GameInfoPanel();
     private final GameHistoryPanel historyPanel;
+    private final Button hintButton = new Button("Подсказка хода");
+    private final Button restartButton = new Button("Начать сначала");
     private List<AlgorithmReport> hintedReports = List.of();
+    private int tileSizePx = 50;
+    private int gapSizePx = 10;
 
     public GamePageController(GameProcessor gameProcessor) {
         this.gameProcessor = gameProcessor;
@@ -38,10 +42,11 @@ public class GamePageController extends VerticalLayout {
         setAlignItems(Alignment.CENTER);
         getStyle()
                 .set("background", "#f6f7f9")
-                .set("padding", "20px")
-                .set("box-sizing", "border-box");
+                .set("padding", "10px 14px")
+                .set("box-sizing", "border-box")
+                .set("height", "100vh")
+                .set("overflow", "hidden");
 
-        Button restartButton = new Button("Начать сначала");
         restartButton.addClickListener(e -> UI.getCurrent().navigate("start"));
         aiStepButton.addClickListener(e -> {
             if (gameProcessor.getGame() == null || gameProcessor.getGame().isFinished()) {
@@ -55,7 +60,7 @@ public class GamePageController extends VerticalLayout {
             renderBoard();
             processTurn();
         });
-        Button hintButton = new Button("Подсказка хода", e -> {
+        hintButton.addClickListener(e -> {
             if (gameProcessor.getGame() == null) {
                 Notification.show("Сначала начните игру", 1000, Notification.Position.MIDDLE);
                 return;
@@ -71,59 +76,72 @@ public class GamePageController extends VerticalLayout {
             infoPanel.setHintLegend(hintedReports, this::getAlgorithmColor);
             renderBoard();
         });
-        Button replayPreviousButton = new Button("Назад по истории", e -> {
+        Button replayPreviousButton = new Button("←", e -> {
             gameProcessor.replayPrevious();
             renderBoard();
         });
-        Button replayNextButton = new Button("Вперед", e -> {
+        Button replayNextButton = new Button("→", e -> {
             gameProcessor.replayNext();
             renderBoard();
             processTurn();
         });
-        Button replayLiveButton = new Button("К текущему ходу", e -> {
+        Button replayLiveButton = new Button("К текущему", e -> {
             gameProcessor.replayLive();
             renderBoard();
             processTurn();
         });
+        replayPreviousButton.getElement().setProperty("title", "Предыдущий ход");
+        replayNextButton.getElement().setProperty("title", "Следующий ход");
+        replayLiveButton.getElement().setProperty("title", "Вернуться к текущему ходу");
 
-        H1 title = new H1("Игра");
-        title.getStyle().set("margin", "0");
-        HorizontalLayout actionBar = new HorizontalLayout(aiStepButton, hintButton, restartButton);
-        actionBar.setWidth("min(980px, 100%)");
-        actionBar.getStyle()
-                .set("background", "white")
-                .set("padding", "12px")
-                .set("border-radius", "8px")
-                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
-                .set("flex-wrap", "wrap");
+        H1 title = new H1("Коридор");
+        title.getStyle()
+                .set("margin", "0 0 8px")
+                .set("font-size", "28px");
 
         historyPanel = new GameHistoryPanel(replayPreviousButton, replayNextButton, replayLiveButton);
 
-        Div boardColumn = new Div(boardGrid);
-        boardColumn.getStyle()
+        HorizontalLayout boardActions = new HorizontalLayout(hintButton, aiStepButton, restartButton);
+        boardActions.getStyle()
                 .set("display", "flex")
                 .set("justify-content", "center")
-                .set("align-items", "flex-start")
-                .set("min-width", "0")
-                .set("overflow", "auto");
+                .set("flex-wrap", "wrap")
+                .set("gap", "8px");
+
+        Div boardColumn = new Div(boardGrid, boardActions);
+        boardColumn.getStyle()
+                .set("display", "flex")
+                .set("flex-direction", "column")
+                .set("justify-content", "center")
+                .set("align-items", "center")
+                .set("gap", "12px")
+                .set("width", "620px")
+                .set("min-width", "620px")
+                .set("height", "calc(100vh - 88px)")
+                .set("max-height", "calc(100vh - 88px)")
+                .set("overflow", "hidden");
 
         Div gameLayout = new Div(infoPanel, boardColumn, historyPanel);
         gameLayout.setWidthFull();
         gameLayout.getStyle()
-                .set("display", "flex")
+                .set("display", "grid")
+                .set("grid-template-columns", "360px 620px 360px")
                 .set("justify-content", "center")
                 .set("align-items", "flex-start")
                 .set("gap", "16px")
-                .set("flex-wrap", "wrap");
+                .set("overflow", "hidden");
 
         add(title);
-        add(actionBar);
         add(gameLayout);
     }
 
     @Override
     protected void onAttach(AttachEvent attachEvent) {
         this.ui = attachEvent.getUI();
+        if (gameProcessor.getGame() == null) {
+            this.ui.navigate("start");
+            return;
+        }
         renderBoard();
         processTurn();
     }
@@ -132,7 +150,10 @@ public class GamePageController extends VerticalLayout {
         boardGrid.removeAll();
 
         Game game = gameProcessor.getGame();
-        if (game == null) return;
+        if (game == null) {
+            UI.getCurrent().navigate("start");
+            return;
+        }
 
         if (game.isFinished()) {
             infoPanel.setTurnStatus("Игра окончена. Победил " + getWinnerText(game), 0);
@@ -155,6 +176,7 @@ public class GamePageController extends VerticalLayout {
 
         Board board = gameProcessor.getBoardForDisplay();
         int size = game.getGameSize().getAmountOfTilesPerSide();
+        updateBoardScale(size);
         int renderSize = size * 2 - 1;
 
         boardGrid.getStyle()
@@ -186,8 +208,8 @@ public class GamePageController extends VerticalLayout {
                     int cj = j / 2;
                     Position pos = new Position(ci, cj);
 
-                    cell.setWidth("50px");
-                    cell.setHeight("50px");
+                    cell.setWidth(tileSizePx + "px");
+                    cell.setHeight(tileSizePx + "px");
 
                     cell.getStyle()
                             .set("border", "1px solid #9ca3af")
@@ -241,14 +263,14 @@ public class GamePageController extends VerticalLayout {
                     boolean verticalGap = (i % 2 == 0 && j % 2 == 1);
 
                     if (horizontalGap) {
-                        cell.setWidth("50px");
-                        cell.setHeight("8px");
+                        cell.setWidth(tileSizePx + "px");
+                        cell.setHeight(gapSizePx + "px");
                     } else if (verticalGap) {
-                        cell.setWidth("8px");
-                        cell.setHeight("50px");
+                        cell.setWidth(gapSizePx + "px");
+                        cell.setHeight(tileSizePx + "px");
                     } else {
-                        cell.setWidth("8px");
-                        cell.setHeight("8px");
+                        cell.setWidth(gapSizePx + "px");
+                        cell.setHeight(gapSizePx + "px");
                     }
 
                     boolean isWall = false;
@@ -360,9 +382,22 @@ public class GamePageController extends VerticalLayout {
     private String buildTemplate(int size) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < size; i++) {
-            sb.append(i % 2 == 0 ? "50px " : "10px ");
+            sb.append(i % 2 == 0 ? tileSizePx + "px " : gapSizePx + "px ");
         }
         return sb.toString();
+    }
+
+    private void updateBoardScale(int size) {
+        if (size >= 11) {
+            tileSizePx = 34;
+            gapSizePx = 8;
+        } else if (size >= 9) {
+            tileSizePx = 42;
+            gapSizePx = 8;
+        } else {
+            tileSizePx = 50;
+            gapSizePx = 9;
+        }
     }
 
     private void processTurn() {
@@ -407,20 +442,7 @@ public class GamePageController extends VerticalLayout {
 
     private void renderReport() {
         AlgorithmReport report = gameProcessor.getLastAiReport();
-        if (report == null) {
-            infoPanel.setReport("Ход ИИ еще не выполнен");
-            return;
-        }
-        infoPanel.setReport(
-                "ИИ: " + report.algorithm()
-                        + " | ход: " + describeMove(report.move())
-                        + " | оценка: " + report.score()
-                        + " | глубина/rollout: " + report.reachedDepth()
-                        + " | узлы/итерации: " + report.nodesVisited()
-                        + " | кандидаты: " + report.consideredMoves()
-                        + " | отсечения: " + report.cutoffs()
-                        + " | " + report.explanation()
-        );
+        infoPanel.setReport(report, describeMove(report == null ? null : report.move()));
     }
 
     private void renderHistory() {
@@ -453,9 +475,10 @@ public class GamePageController extends VerticalLayout {
     private void renderPiece(Div cell, String text, String color) {
         Div piece = new Div();
         piece.setText(text);
+        int pieceSize = Math.max(24, tileSizePx - 14);
         piece.getStyle()
-                .set("width", "34px")
-                .set("height", "34px")
+                .set("width", pieceSize + "px")
+                .set("height", pieceSize + "px")
                 .set("border-radius", "50%")
                 .set("background", color)
                 .set("color", "white")
@@ -578,8 +601,16 @@ public class GamePageController extends VerticalLayout {
             return "-";
         }
         if (move.getMoveType() == ru.ac.uniyar.model.enums.MoveType.MOVE_PLAYER) {
-            return "P" + move.getPlayerId() + " -> " + move.getEndPosition();
+            return "P" + move.getPlayerId() + " -> " + formatPosition(move.getEndPosition());
         }
-        return "P" + move.getPlayerId() + " стена " + move.getStartPosition() + "-" + move.getEndPosition();
+        return "P" + move.getPlayerId()
+                + " стена "
+                + formatPosition(move.getStartPosition())
+                + " - "
+                + formatPosition(move.getEndPosition());
+    }
+
+    private String formatPosition(Position position) {
+        return "(" + (position.row() + 1) + ", " + (position.col() + 1) + ")";
     }
 }

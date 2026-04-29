@@ -27,6 +27,10 @@ public class Game {
     public void applyMove(Move move) {
         switch (move.getMoveType()) {
             case PLACE_WALL -> {
+                Player player = move.getPlayerId() == 1 ? player1 : player2;
+                if (!player.canPlaceWall()) {
+                    throw new IllegalStateException("Player has no walls left");
+                }
                 board.placeWall(move.getStartPosition(), move.getEndPosition());
                 if (move.getPlayerId() == 1) {
                     player1.setAmountOfWallsLeft(player1.getAmountOfWallsLeft() - 1);

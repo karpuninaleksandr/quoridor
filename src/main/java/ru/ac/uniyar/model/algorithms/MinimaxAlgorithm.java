@@ -32,6 +32,7 @@ public class MinimaxAlgorithm implements Algorithm {
      */
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
+        long startedAt = System.currentTimeMillis();
         int size = (int) Math.sqrt(board.getTiles().size());
         long timeLimit = getTimeLimit(hardnessLevel, size);
         long endTime = System.currentTimeMillis() + timeLimit;
@@ -63,6 +64,8 @@ public class MinimaxAlgorithm implements Algorithm {
                 nodesVisited,
                 consideredMoves,
                 0,
+                0,
+                System.currentTimeMillis() - startedAt,
                 "MiniMax перебрал дерево без alpha-beta отсечений"
                         + "; лимит времени: " + timeLimit + " мс"
         );

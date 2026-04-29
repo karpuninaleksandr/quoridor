@@ -33,6 +33,7 @@ public class MonteCarloAlgorithm implements Algorithm {
      */
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
+        long startedAt = System.currentTimeMillis();
         int size = (int) Math.sqrt(board.getTiles().size());
         long timeLimit = getTimeLimit(hardnessLevel, size);
         long endTime = System.currentTimeMillis() + timeLimit;
@@ -63,6 +64,8 @@ public class MonteCarloAlgorithm implements Algorithm {
                 iterations,
                 root.children.size(),
                 0,
+                0,
+                System.currentTimeMillis() - startedAt,
                 "MCTS: выбор по UCT, rollout с эвристическим сэмплированием ходов"
                         + "; лимит времени: " + timeLimit + " мс"
                         + ", бюджет итераций: " + iterationBudget

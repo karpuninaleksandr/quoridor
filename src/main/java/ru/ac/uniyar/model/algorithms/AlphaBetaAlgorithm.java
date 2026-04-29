@@ -41,6 +41,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
      */
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel level, int playerId, int wallsLeft1, int wallsLeft2) {
+        long startedAt = System.currentTimeMillis();
         int size = (int) Math.sqrt(board.getTiles().size());
         int maxDepth = getMaxDepth(level, size);
         long timeLimit = getTimeLimit(level, size);
@@ -74,6 +75,8 @@ public class AlphaBetaAlgorithm implements Algorithm {
                 nodesVisited,
                 consideredMoves,
                 cutoffs,
+                tableHits,
+                System.currentTimeMillis() - startedAt,
                 "AlphaBeta использует сортировку ходов, beta <= alpha отсечения и transposition table"
                         + " с depth-bound flags; попаданий в таблицу: " + tableHits
                         + "; лимит времени: " + timeLimit + " мс"

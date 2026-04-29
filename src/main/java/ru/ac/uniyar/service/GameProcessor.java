@@ -13,6 +13,7 @@ import ru.ac.uniyar.model.algorithms.RandomAlgorithm;
 import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.algorithms.AlgorithmReport;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
+import ru.ac.uniyar.model.enums.MoveType;
 import ru.ac.uniyar.model.players.ComputerPlayer;
 import ru.ac.uniyar.model.players.ComputerPlayerFabric;
 import ru.ac.uniyar.model.players.HumanPlayer;
@@ -101,13 +102,15 @@ public class GameProcessor {
                 game.getPlayer1().getAmountOfWallsLeft(),
                 game.getPlayer2().getAmountOfWallsLeft()
         );
+        AlgorithmReport rawReport = computerPlayer.getLastReport();
+        Move legalMove = ensureLegalComputerMove(move, computerPlayer);
 
-        lastAiReport = enrichReport(computerPlayer.getLastReport(), before, computerPlayer.getPlayerId());
+        lastAiReport = enrichReport(adjustReportForFallback(rawReport, move, legalMove), before, computerPlayer.getPlayerId());
 
-        if (move != null) {
-            makeMove(move);
+        if (legalMove != null) {
+            makeMove(legalMove);
         }
-        return move;
+        return legalMove;
     }
 
     public AlgorithmReport getHintForCurrentPlayer() {
@@ -135,6 +138,8 @@ public class GameProcessor {
                 report.nodesVisited(),
                 report.consideredMoves(),
                 report.cutoffs(),
+                report.tableHits(),
+                report.timeMs(),
                 "Советник использует AlphaBeta средней глубины"
         ), game.getBoard().copy(), getCurrentPlayer().getPlayerId());
     }
@@ -173,6 +178,8 @@ public class GameProcessor {
                         report.nodesVisited(),
                         report.consideredMoves(),
                         report.cutoffs(),
+                        report.tableHits(),
+                        report.timeMs(),
                         report.explanation()
                 ), base, playerId));
             }
@@ -267,7 +274,54 @@ public class GameProcessor {
                 report.nodesVisited(),
                 report.consideredMoves(),
                 report.cutoffs(),
+                report.tableHits(),
+                report.timeMs(),
                 explanation
+        );
+    }
+
+    private Move ensureLegalComputerMove(Move move, ComputerPlayer player) {
+        if (isLegalMove(move, player)) {
+            return move;
+        }
+        Position currentPosition = player.getPlayerId() == 1
+                ? game.getBoard().getPositionOfPlayer1()
+                : game.getBoard().getPositionOfPlayer2();
+        List<Position> fallbackMoves = game.getBoard().getAvailableMoves(currentPosition);
+        if (fallbackMoves.isEmpty()) {
+            return null;
+        }
+        return Move.movePlayer(player.getPlayerId(), fallbackMoves.get(0));
+    }
+
+    private boolean isLegalMove(Move move, Player player) {
+        if (move == null || move.getPlayerId() != player.getPlayerId()) {
+            return false;
+        }
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            return player.canPlaceWall() && gameRules.canPlaceWall(game, move.getStartPosition(), move.getEndPosition());
+        }
+        Position currentPosition = player.getPlayerId() == 1
+                ? game.getBoard().getPositionOfPlayer1()
+                : game.getBoard().getPositionOfPlayer2();
+        return game.getBoard().getAvailableMoves(currentPosition).contains(move.getEndPosition());
+    }
+
+    private AlgorithmReport adjustReportForFallback(AlgorithmReport report, Move originalMove, Move legalMove) {
+        if (report == null || Objects.equals(originalMove, legalMove)) {
+            return report;
+        }
+        return new AlgorithmReport(
+                report.algorithm(),
+                legalMove,
+                report.score(),
+                report.reachedDepth(),
+                report.nodesVisited(),
+                report.consideredMoves(),
+                report.cutoffs(),
+                report.tableHits(),
+                report.timeMs(),
+                report.explanation() + ". Алгоритм вернул недопустимый ход, поэтому применен первый доступный ход фишкой"
         );
     }
 }

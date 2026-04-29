@@ -12,23 +12,34 @@ public class GameInfoPanel extends Div {
     private final Div hintPanel = new Div();
     private final Div reportPanel = new Div();
     private final Div statisticsPanel = new Div();
+    private final Div actionsPanel = new Div();
 
     public GameInfoPanel() {
         getStyle()
                 .set("display", "flex")
                 .set("flex-direction", "column")
                 .set("gap", "12px")
-                .set("width", "300px")
-                .set("min-width", "260px");
+                .set("width", "360px")
+                .set("min-width", "360px")
+                .set("height", "calc(100vh - 88px)")
+                .set("max-height", "calc(100vh - 88px)")
+                .set("box-sizing", "border-box")
+                .set("overflow", "auto");
 
         styleInfoPanel(hintPanel);
         styleInfoPanel(reportPanel);
+        reportPanel.getStyle()
+                .set("height", "250px")
+                .set("min-height", "250px")
+                .set("overflow", "auto");
         styleInfoPanel(statisticsPanel);
+        styleInfoPanel(actionsPanel);
+        actionsPanel.getStyle().set("display", "none");
 
         styleInfoPanel(turnPanel);
         styleInfoPanel(wallsPanel);
 
-        add(turnPanel, wallsPanel, hintPanel, reportPanel, statisticsPanel);
+        add(turnPanel, wallsPanel, hintPanel, reportPanel, statisticsPanel, actionsPanel);
     }
 
     public void setTurn(String text) {
@@ -115,9 +126,66 @@ public class GameInfoPanel extends Div {
         reportPanel.setText(text);
     }
 
+    public void setReport(AlgorithmReport report, String moveDescription) {
+        reportPanel.removeAll();
+        reportPanel.getStyle()
+                .set("display", "grid")
+                .set("gap", "10px")
+                .set("height", "250px")
+                .set("min-height", "250px");
+
+        if (report == null) {
+            return;
+        }
+
+        Div heading = new Div();
+        heading.setText(report.algorithm() + ": " + moveDescription);
+        heading.getStyle()
+                .set("font-weight", "700")
+                .set("color", "#111827");
+
+        Div metrics = new Div();
+        metrics.getStyle()
+                .set("display", "grid")
+                .set("grid-template-columns", "1fr 1fr")
+                .set("gap", "6px");
+        metrics.add(
+                createMetric("Оценка", String.valueOf(report.score())),
+                createMetric("Время", report.timeMs() + " мс"),
+                createMetric("Глубина", String.valueOf(report.reachedDepth())),
+                createMetric("Узлы", String.valueOf(report.nodesVisited())),
+                createMetric("Кандидаты", String.valueOf(report.consideredMoves())),
+                createMetric("Отсечения", String.valueOf(report.cutoffs())),
+                createMetric("TT hits", String.valueOf(report.tableHits()))
+        );
+
+        Div explanation = new Div();
+        explanation.setText(report.explanation());
+        explanation.getStyle()
+                .set("color", "#475569")
+                .set("line-height", "1.35")
+                .set("font-size", "13px");
+
+        reportPanel.add(heading, metrics, explanation);
+    }
+
     public void setStatistics(String text) {
         statisticsPanel.getStyle().set("white-space", "pre-line");
         statisticsPanel.setText(text);
+    }
+
+    public void setActions(com.vaadin.flow.component.Component... actions) {
+        actionsPanel.removeAll();
+        if (actions.length == 0) {
+            actionsPanel.getStyle().set("display", "none");
+            return;
+        }
+        actionsPanel.getStyle()
+                .set("display", "flex")
+                .set("justify-content", "flex-start")
+                .set("flex-wrap", "wrap")
+                .set("gap", "8px");
+        actionsPanel.add(actions);
     }
 
     private void styleInfoPanel(Div panel) {
@@ -155,5 +223,30 @@ public class GameInfoPanel extends Div {
 
         counter.add(marker, text);
         return counter;
+    }
+
+    private Div createMetric(String label, String value) {
+        Div metric = new Div();
+        metric.getStyle()
+                .set("background", "#f8fafc")
+                .set("border", "1px solid #e5e7eb")
+                .set("border-radius", "8px")
+                .set("padding", "7px 8px");
+
+        Div name = new Div();
+        name.setText(label);
+        name.getStyle()
+                .set("font-size", "11px")
+                .set("color", "#64748b");
+
+        Div number = new Div();
+        number.setText(value);
+        number.getStyle()
+                .set("font-weight", "700")
+                .set("font-size", "13px")
+                .set("color", "#111827");
+
+        metric.add(name, number);
+        return metric;
     }
 }

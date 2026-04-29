@@ -3,6 +3,7 @@ package ru.ac.uniyar.ui;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
 import ru.ac.uniyar.model.enums.GameSize;
+import ru.ac.uniyar.model.algorithms.AlgorithmProfile;
 import ru.ac.uniyar.service.GameProcessor;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
@@ -36,6 +37,7 @@ public class StartPageController extends VerticalLayout {
         ComboBox<String> sizeSelector = new ComboBox<>("Размер поля");
         sizeSelector.setItems(Arrays.stream(GameSize.values()).map(GameSize::getDescription).toList());
         sizeSelector.setPlaceholder("Выберите размер");
+        sizeSelector.setValue(GameSize.NORMAL.getDescription());
         addTooltip(sizeSelector, "Размер доски влияет на длину партии, число стен и сложность поиска.");
 
         ComboBox<String> player1 = new ComboBox<>("Выберите первого игрока");
@@ -43,10 +45,12 @@ public class StartPageController extends VerticalLayout {
         player1s.add("Игрок");
         player1s.addAll(Arrays.stream(ComputerAlgorithmType.values()).map(ComputerAlgorithmType::getDescription).toList());
         player1.setItems(player1s);
+        player1.setValue("Игрок");
         addTooltip(player1, "P1 может быть человеком или ИИ. Если выбран ИИ, ниже появится отдельная сложность.");
 
         ComboBox<String> player2 = new ComboBox<>("Выберите второго игрока");
         player2.setItems(Arrays.stream(ComputerAlgorithmType.values()).map(ComputerAlgorithmType::getDescription).toList());
+        player2.setValue(ComputerAlgorithmType.ALPHABETA.getDescription());
         addTooltip(player2, "P2 всегда управляется ИИ: выбери алгоритм, против которого будет играть человек или другой ИИ.");
 
         ComboBox<String> hardness1 = new ComboBox<>("Сложность P1");
@@ -56,15 +60,26 @@ public class StartPageController extends VerticalLayout {
 
         ComboBox<String> hardness2 = new ComboBox<>("Сложность P2");
         hardness2.setItems(Arrays.stream(ComputerPlayerHardnessLevel.values()).map(ComputerPlayerHardnessLevel::getDescription).toList());
+        hardness2.setValue(ComputerPlayerHardnessLevel.MEDIUM.getDescription());
         addTooltip(hardness2, "Сложность второго ИИ. Эта же сложность используется для подсказок в игре против ИИ.");
+
+        Div player1Profile = createProfileBlock("Профиль P1", AlgorithmProfile.describe(null));
+        Div player2Profile = createProfileBlock("Профиль P2", AlgorithmProfile.describe(null));
 
         player1.addValueChangeListener(event -> {
             boolean firstPlayerIsAi = event.getValue() != null && !"Игрок".equals(event.getValue());
             hardness1.setVisible(firstPlayerIsAi);
+            player1Profile.setText(firstPlayerIsAi
+                    ? "Профиль P1: " + AlgorithmProfile.describe(event.getValue())
+                    : "Профиль P1: человек управляет ходами вручную.");
             if (!firstPlayerIsAi) {
                 hardness1.clear();
             }
         });
+        player2.addValueChangeListener(event ->
+                player2Profile.setText("Профиль P2: " + AlgorithmProfile.describe(event.getValue())));
+        player1Profile.setText("Профиль P1: человек управляет ходами вручную.");
+        player2Profile.setText("Профиль P2: " + AlgorithmProfile.describe(player2.getValue()));
 
         Button startButton = new Button("Начать игру", event -> {
             String size = sizeSelector.getValue();
@@ -94,7 +109,7 @@ public class StartPageController extends VerticalLayout {
         addTooltip(tournamentButton, "Турнир: серия партий между двумя выбранными алгоритмами с логами и итоговой статистикой.");
         addTooltip(comparisonButton, "Сравнение: матчи всех разных пар алгоритмов без зеркальных повторов.");
 
-        Div panel = new Div(sizeSelector, player1, player2, hardness1, hardness2);
+        Div panel = new Div(sizeSelector, player1, player1Profile, player2, player2Profile, hardness1, hardness2);
         panel.getStyle()
                 .set("display", "grid")
                 .set("gap", "12px")
@@ -123,5 +138,19 @@ public class StartPageController extends VerticalLayout {
                 .withText(text)
                 .withHoverDelay(250)
                 .withFocusDelay(250);
+    }
+
+    private Div createProfileBlock(String title, String text) {
+        Div profile = new Div();
+        profile.setText(title + ": " + text);
+        profile.getStyle()
+                .set("background", "#f8fafc")
+                .set("border", "1px solid #e5e7eb")
+                .set("border-radius", "8px")
+                .set("padding", "10px 12px")
+                .set("color", "#475569")
+                .set("line-height", "1.35")
+                .set("font-size", "13px");
+        return profile;
     }
 }

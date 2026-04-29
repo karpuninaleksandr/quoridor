@@ -11,6 +11,8 @@ public record AlgorithmReport(
         long nodesVisited,
         long consideredMoves,
         long cutoffs,
+        long tableHits,
+        long timeMs,
         String explanation
 ) {
 }

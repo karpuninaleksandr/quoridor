@@ -129,12 +129,12 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
     private String buildTable(List<AlgorithmComparisonResult> rows) {
         StringBuilder table = new StringBuilder();
         table.append("Итог по алгоритмам\n");
-        table.append("Алгоритм           | Партий | Победы | Поражения | Ничьи | Winrate | Очки/партия | Ср. ходов\n");
-        table.append("-------------------|--------|--------|-----------|-------|---------|-------------|----------\n");
+        table.append("Алгоритм           | Партий | Победы | Поражения | Ничьи | Winrate | Очки/партия | Ср. ходов | Ср. мс | Ср. глуб. | Ср. узлы | Ср. отсеч. | Ср. TT\n");
+        table.append("-------------------|--------|--------|-----------|-------|---------|-------------|----------|--------|-----------|----------|------------|-------\n");
         Map<String, AlgorithmSummary> summaries = buildSummaries(rows);
         for (Map.Entry<String, AlgorithmSummary> entry : summaries.entrySet()) {
             AlgorithmSummary summary = entry.getValue();
-            table.append(String.format("%-18s | %6d | %6d | %9d | %5d | %6.2f%% | %11.2f | %.2f%n",
+            table.append(String.format("%-18s | %6d | %6d | %9d | %5d | %6.2f%% | %11.2f | %8.2f | %6.1f | %9.2f | %8.1f | %10.1f | %.1f%n",
                     entry.getKey(),
                     summary.games,
                     summary.wins,
@@ -142,21 +142,31 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
                     summary.draws,
                     summary.winrate() * 100,
                     summary.pointsPerGame(),
-                    summary.averageMoves()));
+                    summary.averageMoves(),
+                    summary.averageTimeMs(),
+                    summary.averageDepth(),
+                    summary.averageNodes(),
+                    summary.averageCutoffs(),
+                    summary.averageTableHits()));
         }
 
         table.append("\nПопарные результаты\n");
-        table.append("Алгоритм P1        | Алгоритм P2        | Игры | Победы P1 | Победы P2 | Ничьи | Ср. ходов\n");
-        table.append("-------------------|--------------------|------|-----------|-----------|-------|----------\n");
+        table.append("Алгоритм P1        | Алгоритм P2        | Игры | Победы P1 | Победы P2 | Ничьи | Ср. ходов | Ср. мс | Ср. глуб. | Ср. узлы | Ср. отсеч. | Ср. TT\n");
+        table.append("-------------------|--------------------|------|-----------|-----------|-------|----------|--------|-----------|----------|------------|-------\n");
         for (AlgorithmComparisonResult row : rows) {
-            table.append(String.format("%-18s | %-18s | %4d | %9d | %9d | %5d | %.2f%n",
+            table.append(String.format("%-18s | %-18s | %4d | %9d | %9d | %5d | %8.2f | %6.1f | %9.2f | %8.1f | %10.1f | %.1f%n",
                     row.algorithm1(),
                     row.algorithm2(),
                     row.games(),
                     row.wins1(),
                     row.wins2(),
                     row.draws(),
-                    row.averageMoves()));
+                    row.averageMoves(),
+                    row.averageTimeMs(),
+                    row.averageDepth(),
+                    row.averageNodes(),
+                    row.averageCutoffs(),
+                    row.averageTableHits()));
         }
         return table.toString();
     }
@@ -184,8 +194,8 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
             AlgorithmSummary first = summaries.get(row.algorithm1());
             AlgorithmSummary second = summaries.get(row.algorithm2());
 
-            first.add(row.games(), row.wins1(), row.wins2(), row.draws(), row.averageMoves());
-            second.add(row.games(), row.wins2(), row.wins1(), row.draws(), row.averageMoves());
+            first.add(row);
+            second.add(row.reversed());
         }
         return summaries;
     }
@@ -196,13 +206,23 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
         int losses;
         int draws;
         double totalMoves;
+        double totalTimeMs;
+        double totalDepth;
+        double totalNodes;
+        double totalCutoffs;
+        double totalTableHits;
 
-        void add(int games, int wins, int losses, int draws, double averageMoves) {
-            this.games += games;
-            this.wins += wins;
-            this.losses += losses;
-            this.draws += draws;
-            this.totalMoves += averageMoves * games;
+        void add(AlgorithmComparisonResult row) {
+            this.games += row.games();
+            this.wins += row.wins1();
+            this.losses += row.wins2();
+            this.draws += row.draws();
+            this.totalMoves += row.averageMoves() * row.games();
+            this.totalTimeMs += row.averageTimeMs() * row.games();
+            this.totalDepth += row.averageDepth() * row.games();
+            this.totalNodes += row.averageNodes() * row.games();
+            this.totalCutoffs += row.averageCutoffs() * row.games();
+            this.totalTableHits += row.averageTableHits() * row.games();
         }
 
         double winrate() {
@@ -215,6 +235,26 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
 
         double averageMoves() {
             return games == 0 ? 0 : totalMoves / games;
+        }
+
+        double averageTimeMs() {
+            return games == 0 ? 0 : totalTimeMs / games;
+        }
+
+        double averageDepth() {
+            return games == 0 ? 0 : totalDepth / games;
+        }
+
+        double averageNodes() {
+            return games == 0 ? 0 : totalNodes / games;
+        }
+
+        double averageCutoffs() {
+            return games == 0 ? 0 : totalCutoffs / games;
+        }
+
+        double averageTableHits() {
+            return games == 0 ? 0 : totalTableHits / games;
         }
     }
 }

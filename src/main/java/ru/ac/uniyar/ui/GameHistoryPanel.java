@@ -15,8 +15,12 @@ public class GameHistoryPanel extends Div {
                 .set("display", "flex")
                 .set("flex-direction", "column")
                 .set("gap", "12px")
-                .set("width", "300px")
-                .set("min-width", "260px");
+                .set("width", "360px")
+                .set("min-width", "360px")
+                .set("height", "calc(100vh - 88px)")
+                .set("max-height", "calc(100vh - 88px)")
+                .set("box-sizing", "border-box")
+                .set("overflow", "hidden");
 
         historyPanel.setWidthFull();
         historyPanel.getStyle()
@@ -26,12 +30,27 @@ public class GameHistoryPanel extends Div {
                 .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
                 .set("box-sizing", "border-box")
                 .set("white-space", "pre-line")
-                .set("height", "560px")
-                .set("max-height", "560px")
+                .set("height", "calc(100vh - 152px)")
+                .set("max-height", "calc(100vh - 152px)")
                 .set("overflow", "auto");
 
         HorizontalLayout replayControls = new HorizontalLayout(controls);
-        replayControls.getStyle().set("flex-wrap", "wrap");
+        replayControls.setWidthFull();
+        replayControls.getStyle()
+                .set("display", "flex")
+                .set("flex-wrap", "nowrap")
+                .set("gap", "6px")
+                .set("justify-content", "center")
+                .set("background", "white")
+                .set("padding", "8px")
+                .set("border-radius", "8px")
+                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)");
+
+        for (Component control : controls) {
+            control.getElement().getStyle()
+                    .set("min-width", "42px")
+                    .set("height", "34px");
+        }
 
         add(historyPanel, replayControls);
     }
@@ -49,8 +68,18 @@ public class GameHistoryPanel extends Div {
             return "-";
         }
         if (move.getMoveType() == ru.ac.uniyar.model.enums.MoveType.MOVE_PLAYER) {
-            return "P" + move.getPlayerId() + " -> " + move.getEndPosition();
+            return "Игрок P" + move.getPlayerId()
+                    + " перешел на клетку "
+                    + formatPosition(move.getEndPosition());
         }
-        return "P" + move.getPlayerId() + " стена " + move.getStartPosition() + "-" + move.getEndPosition();
+        return "Игрок P" + move.getPlayerId()
+                + " поставил стену "
+                + formatPosition(move.getStartPosition())
+                + " - "
+                + formatPosition(move.getEndPosition());
+    }
+
+    private String formatPosition(ru.ac.uniyar.model.Position position) {
+        return "(" + (position.row() + 1) + ", " + (position.col() + 1) + ")";
     }
 }
