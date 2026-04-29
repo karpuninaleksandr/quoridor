@@ -2,6 +2,7 @@ package ru.ac.uniyar.model.algorithms;
 
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
+import ru.ac.uniyar.model.Position;
 import ru.ac.uniyar.model.enums.*;
 
 import java.util.*;
@@ -14,6 +15,7 @@ public class MinimaxAlgorithm implements Algorithm {
     private AlgorithmReport lastReport;
     private long nodesVisited;
     private long consideredMoves;
+    private List<Position> recentPositions = List.of();
 
     @Override
     public ComputerAlgorithmType getType() {
@@ -23,6 +25,11 @@ public class MinimaxAlgorithm implements Algorithm {
     @Override
     public AlgorithmReport getLastReport() {
         return lastReport;
+    }
+
+    @Override
+    public void setRecentPositions(List<Position> recentPositions) {
+        this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
     /**
@@ -122,6 +129,7 @@ public class MinimaxAlgorithm implements Algorithm {
 
             int value = minimax(copy, depth - 1, false,
                     playerId, size, newWallsLeft1, newWallsLeft2, endTime);
+            value += movementPreference(move, board, playerId, size, recentPositions);
             if (value > bestValue) {
                 bestValue = value;
                 bestMove = move;

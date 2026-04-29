@@ -24,15 +24,23 @@ public class GameInfoPanel extends Div {
                 .set("height", "calc(100vh - 88px)")
                 .set("max-height", "calc(100vh - 88px)")
                 .set("box-sizing", "border-box")
-                .set("overflow", "auto");
+                .set("overflow", "hidden");
 
         styleInfoPanel(hintPanel);
+        hintPanel.getStyle()
+                .set("height", "164px")
+                .set("min-height", "164px")
+                .set("overflow", "auto");
         styleInfoPanel(reportPanel);
         reportPanel.getStyle()
                 .set("height", "250px")
                 .set("min-height", "250px")
                 .set("overflow", "auto");
         styleInfoPanel(statisticsPanel);
+        statisticsPanel.getStyle()
+                .set("flex", "1")
+                .set("min-height", "120px")
+                .set("overflow", "auto");
         styleInfoPanel(actionsPanel);
         actionsPanel.getStyle().set("display", "none");
 
@@ -96,29 +104,24 @@ public class GameInfoPanel extends Div {
 
     public void setHintLegend(List<AlgorithmReport> reports, Function<String, String> colorProvider) {
         hintPanel.removeAll();
-        hintPanel.getStyle()
-                .set("display", reports.isEmpty() ? "none" : "grid")
-                .set("gap", "8px");
+        hintPanel.getStyle().set("display", "grid").set("gap", "8px");
+        addAlgorithmColorRow("Случайный", colorProvider.apply("Случайный"));
+        addAlgorithmColorRow("MiniMax", colorProvider.apply("MiniMax"));
+        addAlgorithmColorRow("AlphaBeta", colorProvider.apply("AlphaBeta"));
+        addAlgorithmColorRow("MonteCarlo", colorProvider.apply("MonteCarlo"));
+        if (reports.isEmpty()) {
+            return;
+        }
+
+        Div separator = new Div();
+        separator.getStyle()
+                .set("height", "1px")
+                .set("background", "#e5e7eb")
+                .set("margin", "2px 0");
+        hintPanel.add(separator);
+
         for (AlgorithmReport report : reports) {
-            Div row = new Div();
-            row.getStyle()
-                    .set("display", "flex")
-                    .set("align-items", "center")
-                    .set("gap", "8px");
-
-            Div swatch = new Div();
-            swatch.getStyle()
-                    .set("width", "18px")
-                    .set("height", "18px")
-                    .set("border-radius", "4px")
-                    .set("background", colorProvider.apply(report.algorithm()))
-                    .set("box-shadow", "inset 0 0 0 1px rgba(15, 23, 42, 0.25)");
-
-            Div name = new Div();
-            name.setText(report.algorithm());
-            name.getStyle().set("font-weight", "600");
-            row.add(swatch, name);
-            hintPanel.add(row);
+            addAlgorithmColorRow(report.algorithm(), colorProvider.apply(report.algorithm()));
         }
     }
 
@@ -223,6 +226,28 @@ public class GameInfoPanel extends Div {
 
         counter.add(marker, text);
         return counter;
+    }
+
+    private void addAlgorithmColorRow(String algorithm, String color) {
+        Div row = new Div();
+        row.getStyle()
+                .set("display", "flex")
+                .set("align-items", "center")
+                .set("gap", "8px");
+
+        Div swatch = new Div();
+        swatch.getStyle()
+                .set("width", "18px")
+                .set("height", "18px")
+                .set("border-radius", "4px")
+                .set("background", color)
+                .set("box-shadow", "inset 0 0 0 1px rgba(15, 23, 42, 0.25)");
+
+        Div name = new Div();
+        name.setText(algorithm);
+        name.getStyle().set("font-weight", "600");
+        row.add(swatch, name);
+        hintPanel.add(row);
     }
 
     private Div createMetric(String label, String value) {

@@ -186,8 +186,12 @@ public class TournamentService {
 
     private int play(Game game, int moveLimit, Consumer<String> logger, int gameNumber, int totalGames,
                      int gamesLeftAfterCurrent, ComparisonMetrics metrics) {
+        Map<Integer, List<Position>> recentPositions = new java.util.HashMap<>();
+        recentPositions.put(1, new ArrayList<>(List.of(game.getBoard().getPositionOfPlayer1())));
+        recentPositions.put(2, new ArrayList<>(List.of(game.getBoard().getPositionOfPlayer2())));
         while (!game.isFinished() && game.getAmountOfMoves() < moveLimit) {
             Player player = game.getCurrentPlayer() == 1 ? game.getPlayer1() : game.getPlayer2();
+            ((ComputerPlayer) player).getAlgorithm().setRecentPositions(recentPositions.get(player.getPlayerId()));
             Move move = ((ComputerPlayer) player).getMove(
                     game.getBoard(),
                     player.getPlayerId(),
@@ -209,6 +213,13 @@ public class TournamentService {
                 metrics.add(report);
             }
             game.applyMove(move);
+            if (move.getMoveType() == MoveType.MOVE_PLAYER) {
+                List<Position> positions = recentPositions.get(move.getPlayerId());
+                positions.add(0, move.getEndPosition());
+                if (positions.size() > 6) {
+                    positions.remove(positions.size() - 1);
+                }
+            }
             logGameProgress(game, moveLimit, logger, gameNumber, totalGames, gamesLeftAfterCurrent, move);
             if (!game.isFinished()) {
                 game.setCurrentPlayer(game.getCurrentPlayer() == 1 ? 2 : 1);

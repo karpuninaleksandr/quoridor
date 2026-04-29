@@ -2,6 +2,7 @@ package ru.ac.uniyar.model.algorithms;
 
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
+import ru.ac.uniyar.model.Position;
 import ru.ac.uniyar.model.enums.*;
 
 import java.util.*;
@@ -14,6 +15,8 @@ public class MonteCarloAlgorithm implements Algorithm {
     private static final double C = 1.2;
     private static final Random random = new Random();
     private AlgorithmReport lastReport;
+    private List<Position> recentPositions = List.of();
+    private int rootPlayerId;
 
     @Override
     public ComputerAlgorithmType getType() {
@@ -23,6 +26,11 @@ public class MonteCarloAlgorithm implements Algorithm {
     @Override
     public AlgorithmReport getLastReport() {
         return lastReport;
+    }
+
+    @Override
+    public void setRecentPositions(List<Position> recentPositions) {
+        this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
     /**
@@ -41,6 +49,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         long iterationBudget = getIterationBudget(hardnessLevel, size);
 
         long iterations = 0;
+        rootPlayerId = playerId;
         Node root = new Node(board.copy(), null, null, playerId, wallsLeft1, wallsLeft2);
         while (System.currentTimeMillis() < endTime && iterations < iterationBudget) {
             Node node = select(root);
@@ -247,7 +256,10 @@ public class MonteCarloAlgorithm implements Algorithm {
         Board copy = board.copy();
         applyMove(copy, move);
         int size = (int) Math.sqrt(copy.getTiles().size());
-        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2);
+        int preference = playerId == rootPlayerId
+                ? movementPreference(move, board, playerId, size, recentPositions)
+                : 0;
+        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2) + preference;
     }
 
     private double normalizedEvaluate(Board board, int playerId, int wallsLeft1, int wallsLeft2) {

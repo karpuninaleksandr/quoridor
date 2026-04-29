@@ -30,8 +30,8 @@ public class GameHistoryPanel extends Div {
                 .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
                 .set("box-sizing", "border-box")
                 .set("white-space", "pre-line")
-                .set("height", "calc(100vh - 152px)")
-                .set("max-height", "calc(100vh - 152px)")
+                .set("flex", "1")
+                .set("min-height", "0")
                 .set("overflow", "auto");
 
         HorizontalLayout replayControls = new HorizontalLayout(controls);
@@ -44,7 +44,9 @@ public class GameHistoryPanel extends Div {
                 .set("background", "white")
                 .set("padding", "8px")
                 .set("border-radius", "8px")
-                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)");
+                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
+                .set("box-sizing", "border-box")
+                .set("flex-shrink", "0");
 
         for (Component control : controls) {
             control.getElement().getStyle()

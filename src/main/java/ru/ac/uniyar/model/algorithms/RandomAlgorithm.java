@@ -2,6 +2,7 @@ package ru.ac.uniyar.model.algorithms;
 
 import ru.ac.uniyar.model.Board;
 import ru.ac.uniyar.model.Move;
+import ru.ac.uniyar.model.Position;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
 
@@ -10,6 +11,7 @@ import java.util.*;
 public class RandomAlgorithm implements Algorithm {
     private static final Random random = new Random();
     private AlgorithmReport lastReport;
+    private List<Position> recentPositions = List.of();
 
     @Override
     public ComputerAlgorithmType getType() {
@@ -19,6 +21,11 @@ public class RandomAlgorithm implements Algorithm {
     @Override
     public AlgorithmReport getLastReport() {
         return lastReport;
+    }
+
+    @Override
+    public void setRecentPositions(List<Position> recentPositions) {
+        this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
     @Override
@@ -72,6 +79,7 @@ public class RandomAlgorithm implements Algorithm {
         Board copy = board.copy();
         applyMove(copy, move);
         int size = (int) Math.sqrt(copy.getTiles().size());
-        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2);
+        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2)
+                + movementPreference(move, board, playerId, size, recentPositions);
     }
 }

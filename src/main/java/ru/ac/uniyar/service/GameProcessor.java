@@ -96,6 +96,7 @@ public class GameProcessor {
         }
 
         Board before = game.getBoard().copy();
+        computerPlayer.getAlgorithm().setRecentPositions(getRecentPositions(computerPlayer.getPlayerId()));
         Move move = computerPlayer.getMove(
                 game.getBoard(),
                 computerPlayer.getPlayerId(),
@@ -291,7 +292,10 @@ public class GameProcessor {
         if (fallbackMoves.isEmpty()) {
             return null;
         }
-        return Move.movePlayer(player.getPlayerId(), fallbackMoves.get(0));
+        Position fallback = fallbackMoves.stream()
+                .max(Comparator.comparingInt(position -> scoreFallbackPosition(position, currentPosition, player.getPlayerId())))
+                .orElse(fallbackMoves.get(0));
+        return Move.movePlayer(player.getPlayerId(), fallback);
     }
 
     private boolean isLegalMove(Move move, Player player) {
@@ -321,7 +325,47 @@ public class GameProcessor {
                 report.cutoffs(),
                 report.tableHits(),
                 report.timeMs(),
-                report.explanation() + ". Алгоритм вернул недопустимый ход, поэтому применен первый доступный ход фишкой"
+                report.explanation() + ". Алгоритм вернул недопустимый ход, поэтому применен лучший доступный ход фишкой"
         );
+    }
+
+    private int scoreFallbackPosition(Position position, Position currentPosition, int playerId) {
+        int size = game.getGameSize().getAmountOfTilesPerSide();
+        int targetRow = playerId == 1 ? 0 : size - 1;
+        int currentDistance = Math.abs(currentPosition.row() - targetRow);
+        int nextDistance = Math.abs(position.row() - targetRow);
+        int score = (currentDistance - nextDistance) * 100;
+
+        int direction = playerId == 1 ? -1 : 1;
+        int rowDelta = position.row() - currentPosition.row();
+        if (rowDelta == direction) {
+            score += 60;
+        } else if (rowDelta == -direction) {
+            score -= 180;
+        }
+
+        List<Position> recent = getRecentPositions(playerId);
+        for (int index = 0; index < recent.size(); ++index) {
+            Position recentPosition = recent.get(index);
+            if (recentPosition.equals(currentPosition)) {
+                continue;
+            }
+            if (recentPosition.equals(position)) {
+                score -= index <= 1 ? 700 : 220;
+            }
+        }
+        return score;
+    }
+
+    private List<Position> getRecentPositions(int playerId) {
+        List<Position> positions = new ArrayList<>();
+        positions.add(playerId == 1 ? game.getBoard().getPositionOfPlayer1() : game.getBoard().getPositionOfPlayer2());
+        for (int index = moveHistory.size() - 1; index >= 0 && positions.size() < 6; --index) {
+            Move move = moveHistory.get(index);
+            if (move.getPlayerId() == playerId && move.getMoveType() == MoveType.MOVE_PLAYER) {
+                positions.add(move.getEndPosition());
+            }
+        }
+        return positions;
     }
 }

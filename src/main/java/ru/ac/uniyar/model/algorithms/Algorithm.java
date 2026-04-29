@@ -20,6 +20,42 @@ public interface Algorithm {
         return null;
     }
 
+    default void setRecentPositions(List<Position> recentPositions) {
+    }
+
+    default int movementPreference(Move move, Board board, int playerId, int size, List<Position> recentPositions) {
+        if (move.getMoveType() != MoveType.MOVE_PLAYER || move.getPlayerId() != playerId) {
+            return 0;
+        }
+
+        int score = 0;
+        Position current = getCurrentPosition(board, playerId);
+        Position target = move.getEndPosition();
+        int direction = playerId == 1 ? -1 : 1;
+        int rowDelta = target.row() - current.row();
+
+        if (rowDelta == direction) {
+            score += 45;
+        } else if (rowDelta == -direction) {
+            score -= 120;
+        }
+
+        for (int index = 0; index < recentPositions.size(); ++index) {
+            Position recent = recentPositions.get(index);
+            if (recent.equals(current)) {
+                continue;
+            }
+            if (target.equals(recent)) {
+                score -= index <= 1 ? 500 : 180;
+            }
+        }
+
+        int before = Math.abs(current.row() - getTargetRow(playerId, size));
+        int after = Math.abs(target.row() - getTargetRow(playerId, size));
+        score += (before - after) * 35;
+        return score;
+    }
+
     default List<Move> getMoves(Board board, int playerId, int wallsLeft) {
         List<Move> moves = new ArrayList<>();
         Position pos = getCurrentPosition(board, playerId);

@@ -23,6 +23,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
     private long consideredMoves;
     private long cutoffs;
     private long tableHits;
+    private List<Position> recentPositions = List.of();
 
     @Override
     public ComputerAlgorithmType getType() {
@@ -32,6 +33,11 @@ public class AlphaBetaAlgorithm implements Algorithm {
     @Override
     public AlgorithmReport getLastReport() {
         return lastReport;
+    }
+
+    @Override
+    public void setRecentPositions(List<Position> recentPositions) {
+        this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
     /**
@@ -111,7 +117,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
      */
     private SearchResult search(Board board, int depth, int playerId, int size,
                                 int wallsLeft1, int wallsLeft2, long endTime) {
-        List<Move> moves = getMoves(board, playerId, wallsLeft1);
+        List<Move> moves = getMoves(board, playerId, wallsLeft1).stream()
+                .filter(move -> isRootMoveLegal(board, move, playerId, wallsLeft1))
+                .toList();
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0, null);
         if (moves.size() > 36) {
             moves = moves.subList(0, 36);
@@ -137,6 +145,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
             }
             int val = alphaBeta(copy, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false,
                     playerId, size, newWallsLeft1, newWallsLeft2, endTime, 1);
+            val += rootMovePreference(move, board, playerId, size);
             if (val > best) {
                 best = val;
                 bestMove = move;
@@ -285,12 +294,31 @@ public class AlphaBetaAlgorithm implements Algorithm {
         }
 
         score += goodMoves.getOrDefault(move.toString(), 0) * 2;
+        score += rootMovePreference(move, board, playerId, size);
 
         Board copy = board.copy();
         applyMove(copy, move);
         score += evaluate(copy, playerId, size, wallsLeft1, wallsLeft2);
 
         return score;
+    }
+
+    private int rootMovePreference(Move move, Board board, int playerId, int size) {
+        return movementPreference(move, board, playerId, size, recentPositions);
+    }
+
+    private boolean isRootMoveLegal(Board board, Move move, int playerId, int wallsLeft) {
+        if (move.getPlayerId() != playerId) {
+            return false;
+        }
+        if (move.getMoveType() == MoveType.MOVE_PLAYER) {
+            return board.getAvailableMoves(getCurrentPosition(board, playerId)).contains(move.getEndPosition());
+        }
+        if (wallsLeft <= 0) {
+            return false;
+        }
+        return isWallPlaceable(board, move.getStartPosition(), move.getEndPosition())
+                && isValidWall(board, move.getStartPosition(), move.getEndPosition());
     }
 
     /**
