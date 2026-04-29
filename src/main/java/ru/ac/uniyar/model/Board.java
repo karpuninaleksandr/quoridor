@@ -99,6 +99,31 @@ public class Board {
         return result;
     }
 
+    public List<Position> getPathNeighbors(Position pos) {
+        List<Position> result = new ArrayList<>();
+        BoardTile tile = tiles.get(pos);
+        if (tile == null) return result;
+
+        addPathNeighbor(result, pos, -1, 0, tile.isForwardMovementAvailable());
+        addPathNeighbor(result, pos, 1, 0, tile.isBackwardsMovementAvailable());
+        addPathNeighbor(result, pos, 0, -1, tile.isLeftMovementAvailable());
+        addPathNeighbor(result, pos, 0, 1, tile.isRightMovementAvailable());
+
+        return result;
+    }
+
+    private void addPathNeighbor(List<Position> result, Position pos,
+                                 int rowDelta, int colDelta, boolean movementAvailable) {
+        if (!movementAvailable) {
+            return;
+        }
+
+        Position next = pos.move(rowDelta, colDelta);
+        if (tiles.containsKey(next)) {
+            result.add(next);
+        }
+    }
+
     private void handleMove(List<Position> result, Position pos, Position opponent,
                             int rowDelta, int colDelta, boolean movementAvailable) {
         if (!movementAvailable) {

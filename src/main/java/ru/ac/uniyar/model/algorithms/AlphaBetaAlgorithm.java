@@ -59,6 +59,25 @@ public class AlphaBetaAlgorithm implements Algorithm {
         cutoffs = 0;
         tableHits = 0;
 
+        int currentWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
+        Move tacticalMove = findEndgameMove(board, playerId, currentWalls);
+        if (tacticalMove != null) {
+            int tacticalScore = scoreMoveAfterApply(board, tacticalMove, playerId, size, wallsLeft1, wallsLeft2);
+            lastReport = new AlgorithmReport(
+                    getType().getDescription(),
+                    tacticalMove,
+                    tacticalScore,
+                    0,
+                    nodesVisited,
+                    1,
+                    cutoffs,
+                    tableHits,
+                    System.currentTimeMillis() - startedAt,
+                    "AlphaBeta применил эндшпильное правило: немедленная победа или срочная блокировка"
+            );
+            return tacticalMove;
+        }
+
         Move bestMove = null;
         int bestScore = 0;
         int reachedDepth = 0;
@@ -117,9 +136,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
      */
     private SearchResult search(Board board, int depth, int playerId, int size,
                                 int wallsLeft1, int wallsLeft2, long endTime) {
-        List<Move> moves = getMoves(board, playerId, wallsLeft1).stream()
+        List<Move> moves = new ArrayList<>(getMoves(board, playerId, wallsLeft1).stream()
                 .filter(move -> isRootMoveLegal(board, move, playerId, wallsLeft1))
-                .toList();
+                .toList());
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0, null);
         if (moves.size() > 36) {
             moves = moves.subList(0, 36);
@@ -194,6 +213,12 @@ public class AlphaBetaAlgorithm implements Algorithm {
         }
 
         if (depth == 0) {
+            if (isNoisyPosition(board, playerId, size)) {
+                int calmScore = quiescence(board, alpha, beta, max, playerId, size,
+                        wallsLeft1, wallsLeft2, endTime, 2);
+                transpositionTable.put(key, new TranspositionEntry(depth, calmScore, Bound.EXACT, null));
+                return calmScore;
+            }
             int eval = evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
             transpositionTable.put(key, new TranspositionEntry(depth, eval, Bound.EXACT, null));
             return eval;
@@ -261,6 +286,71 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return best;
     }
 
+    private int quiescence(Board board, int alpha, int beta, boolean max,
+                           int playerId, int size, int wallsLeft1, int wallsLeft2,
+                           long endTime, int extensionDepth) {
+        nodesVisited++;
+        int standPat = evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
+        if (extensionDepth == 0 || System.currentTimeMillis() > endTime) {
+            return standPat;
+        }
+
+        if (max) {
+            if (standPat >= beta) {
+                return beta;
+            }
+            alpha = Math.max(alpha, standPat);
+        } else {
+            if (standPat <= alpha) {
+                return alpha;
+            }
+            beta = Math.min(beta, standPat);
+        }
+
+        int current = max ? playerId : 3 - playerId;
+        int walls = current == 1 ? wallsLeft1 : wallsLeft2;
+        List<Move> moves = getQuiescenceMoves(board, current, walls, playerId, size);
+        if (moves.isEmpty()) {
+            return standPat;
+        }
+        orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0, null);
+
+        for (Move move : moves) {
+            if (System.currentTimeMillis() > endTime) {
+                break;
+            }
+            Board copy = board.copy();
+            applyMove(copy, move);
+
+            int newWallsLeft1 = wallsLeft1;
+            int newWallsLeft2 = wallsLeft2;
+            if (move.getMoveType() == MoveType.PLACE_WALL) {
+                if (current == 1) {
+                    --newWallsLeft1;
+                } else {
+                    --newWallsLeft2;
+                }
+            }
+
+            int value = quiescence(copy, alpha, beta, !max, playerId, size,
+                    newWallsLeft1, newWallsLeft2, endTime, extensionDepth - 1);
+            if (max) {
+                if (value >= beta) {
+                    cutoffs++;
+                    return beta;
+                }
+                alpha = Math.max(alpha, value);
+            } else {
+                if (value <= alpha) {
+                    cutoffs++;
+                    return alpha;
+                }
+                beta = Math.min(beta, value);
+            }
+        }
+        return max ? alpha : beta;
+    }
+
     /**
      * сортируем ходы
      */
@@ -296,11 +386,24 @@ public class AlphaBetaAlgorithm implements Algorithm {
         score += goodMoves.getOrDefault(move.toString(), 0) * 2;
         score += rootMovePreference(move, board, playerId, size);
 
-        Board copy = board.copy();
-        applyMove(copy, move);
-        score += evaluate(copy, playerId, size, wallsLeft1, wallsLeft2);
+        score += scoreMoveAfterApply(board, move, playerId, size, wallsLeft1, wallsLeft2);
 
         return score;
+    }
+
+    private int scoreMoveAfterApply(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
+        Board copy = board.copy();
+        applyMove(copy, move);
+        int newWallsLeft1 = wallsLeft1;
+        int newWallsLeft2 = wallsLeft2;
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            if (move.getPlayerId() == 1) {
+                --newWallsLeft1;
+            } else {
+                --newWallsLeft2;
+            }
+        }
+        return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2);
     }
 
     private int rootMovePreference(Move move, Board board, int playerId, int size) {

@@ -75,12 +75,18 @@ public interface Algorithm {
         List<Position> myPath = getShortestPathCells(board, getCurrentPosition(board, playerId),
                 getTargetRow(playerId, size));
         List<Position> candidateCells = new ArrayList<>();
-        candidateCells.addAll(enemyPath.subList(0, Math.min(10, enemyPath.size())));
-        candidateCells.addAll(myPath.subList(0, Math.min(6, myPath.size())));
+        List<Position> enemyFront = enemyPath.subList(0, Math.min(12, enemyPath.size()));
+        List<Position> myFront = myPath.subList(0, Math.min(7, myPath.size()));
+        candidateCells.addAll(enemyFront);
+        candidateCells.addAll(myFront);
         addNeighborhood(candidateCells, getCurrentPosition(board, 3 - playerId), size);
+        for (Position cell : enemyFront.subList(0, Math.min(5, enemyFront.size()))) {
+            addNeighborhood(candidateCells, cell, size, 1);
+        }
 
         int beforeEnemy = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
         int beforeMine = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
+        List<Move> wallMoves = new ArrayList<>();
 
         for (Position cell : candidateCells) {
             int i = cell.row();
@@ -93,7 +99,7 @@ public interface Algorithm {
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
                     if (isStrategicWall(board, start, end, playerId, size, beforeEnemy, beforeMine)) {
-                        moves.add(Move.placeWall(playerId, start, end));
+                        wallMoves.add(Move.placeWall(playerId, start, end));
                     }
                 }
             }
@@ -105,17 +111,26 @@ public interface Algorithm {
 
                 if (used.add(wallKey) && isWallPlaceable(board, start, end) && isValidWall(board, start, end)) {
                     if (isStrategicWall(board, start, end, playerId, size, beforeEnemy, beforeMine)) {
-                        moves.add(Move.placeWall(playerId, start, end));
+                        wallMoves.add(Move.placeWall(playerId, start, end));
                     }
                 }
             }
         }
+        wallMoves.sort((a, b) -> Integer.compare(
+                wallImpact(board, b, playerId, size),
+                wallImpact(board, a, playerId, size)
+        ));
+        moves.addAll(wallMoves);
         return moves;
     }
 
     default void addNeighborhood(List<Position> cells, Position center, int size) {
-        for (int di = -2; di <= 2; ++di) {
-            for (int dj = -2; dj <= 2; ++dj) {
+        addNeighborhood(cells, center, size, 2);
+    }
+
+    default void addNeighborhood(List<Position> cells, Position center, int size, int radius) {
+        for (int di = -radius; di <= radius; ++di) {
+            for (int dj = -radius; dj <= radius; ++dj) {
                 int nextRow = center.row() + di;
                 int nextCol = center.col() + dj;
                 if (nextRow >= 0 && nextCol >= 0 && nextRow < size && nextCol < size) {
@@ -133,7 +148,16 @@ public interface Algorithm {
         int afterEnemy = calculateShortestPath(copy, getCurrentPosition(copy, 3 - playerId), getTargetRow(3 - playerId, size));
         int afterMine = calculateShortestPath(copy, getCurrentPosition(copy, playerId), getTargetRow(playerId, size));
 
-        return afterEnemy > beforeEnemy || afterEnemy - beforeEnemy >= afterMine - beforeMine;
+        int enemyGain = afterEnemy - beforeEnemy;
+        int myCost = Math.max(0, afterMine - beforeMine);
+
+        if (enemyGain >= 2) {
+            return true;
+        }
+        if (beforeEnemy <= 3 && enemyGain > 0) {
+            return true;
+        }
+        return enemyGain > 0 && enemyGain >= myCost;
     }
 
     default boolean isWallPlaceable(Board board, Position start, Position end) {
@@ -163,7 +187,7 @@ public interface Algorithm {
                 break;
             }
 
-            for (Position next : board.getAvailableMoves(curr)) {
+            for (Position next : board.getPathNeighbors(curr)) {
                 if (visited.add(next)) {
                     parent.put(next, curr);
                     queue.add(next);
@@ -176,6 +200,7 @@ public interface Algorithm {
             path.add(end);
             end = parent.get(end);
         }
+        Collections.reverse(path);
         return path;
     }
 
@@ -206,7 +231,7 @@ public interface Algorithm {
                 return true;
             }
 
-            for (Position next : board.getAvailableMoves(curr)) {
+            for (Position next : board.getPathNeighbors(curr)) {
                 if (visited.add(next)) {
                     queue.add(next);
                 }
@@ -249,6 +274,80 @@ public interface Algorithm {
         return null;
     }
 
+    default Move findEndgameMove(Board board, int playerId, int wallsLeft) {
+        int size = (int) Math.sqrt(board.getTiles().size());
+        Position current = getCurrentPosition(board, playerId);
+        for (Position next : board.getAvailableMoves(current)) {
+            if (next.row() == getTargetRow(playerId, size)) {
+                return Move.movePlayer(playerId, next);
+            }
+        }
+
+        if (wallsLeft <= 0) {
+            return null;
+        }
+
+        int enemy = 3 - playerId;
+        int enemyDistance = calculateShortestPath(board, getCurrentPosition(board, enemy), getTargetRow(enemy, size));
+        if (enemyDistance > 2) {
+            return null;
+        }
+
+        Move bestWall = null;
+        int bestImpact = 0;
+        for (Move move : getMoves(board, playerId, wallsLeft)) {
+            if (move.getMoveType() != MoveType.PLACE_WALL) {
+                continue;
+            }
+            int impact = wallImpact(board, move, playerId, size);
+            if (impact > bestImpact) {
+                bestImpact = impact;
+                bestWall = move;
+            }
+        }
+        return bestImpact > 0 ? bestWall : null;
+    }
+
+    default boolean isNoisyPosition(Board board, int playerId, int size) {
+        int myDist = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
+        int enemyDist = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
+        return myDist <= 2 || enemyDist <= 2;
+    }
+
+    default List<Move> getQuiescenceMoves(Board board, int currentPlayer, int wallsLeft, int rootPlayerId, int size) {
+        List<Move> moves = new ArrayList<>();
+        Position current = getCurrentPosition(board, currentPlayer);
+        for (Position next : board.getAvailableMoves(current)) {
+            if (next.row() == getTargetRow(currentPlayer, size)) {
+                moves.add(Move.movePlayer(currentPlayer, next));
+            }
+        }
+
+        if (wallsLeft > 0) {
+            List<Move> tacticalWalls = getMoves(board, currentPlayer, wallsLeft).stream()
+                    .filter(move -> move.getMoveType() == MoveType.PLACE_WALL)
+                    .sorted((a, b) -> Integer.compare(
+                            wallImpact(board, b, currentPlayer, size),
+                            wallImpact(board, a, currentPlayer, size)
+                    ))
+                    .limit(8)
+                    .toList();
+            moves.addAll(tacticalWalls);
+        }
+        return moves;
+    }
+
+    default int wallImpact(Board board, Move move, int playerId, int size) {
+        int enemy = 3 - playerId;
+        int beforeEnemy = calculateShortestPath(board, getCurrentPosition(board, enemy), getTargetRow(enemy, size));
+        int beforeMine = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
+        Board copy = board.copy();
+        applyMove(copy, move);
+        int afterEnemy = calculateShortestPath(copy, getCurrentPosition(copy, enemy), getTargetRow(enemy, size));
+        int afterMine = calculateShortestPath(copy, getCurrentPosition(copy, playerId), getTargetRow(playerId, size));
+        return (afterEnemy - beforeEnemy) * 100 - Math.max(0, afterMine - beforeMine) * 45;
+    }
+
     default int evaluate(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         Integer terminal = terminalScore(board, playerId, size, 0);
         if (terminal != null) {
@@ -258,20 +357,42 @@ public interface Algorithm {
         int myDist = calculateShortestPath(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
         int enemyDist = calculateShortestPath(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
 
-        int score = (enemyDist - myDist) * 50;
+        int score = (enemyDist - myDist) * 65;
+        score += endgameDistanceScore(myDist, enemyDist);
 
-        score += board.getAvailableMoves(getCurrentPosition(board, playerId)).size() * 3;
-        score -= board.getAvailableMoves(getCurrentPosition(board, 3 - playerId)).size() * 2;
+        score += board.getAvailableMoves(getCurrentPosition(board, playerId)).size() * 4;
+        score -= board.getAvailableMoves(getCurrentPosition(board, 3 - playerId)).size() * 3;
 
         int myWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
         int enemyWalls = playerId == 1 ? wallsLeft2 : wallsLeft1;
-        score += (myWalls - enemyWalls) * 15;
+        int wallWeight = enemyDist <= 4 ? 24 : 14;
+        score += myWalls * wallWeight - enemyWalls * 10;
 
         int myRow = getCurrentPosition(board, playerId).row();
         int enemyRow = getCurrentPosition(board, 3 - playerId).row();
-        score += playerId == 1 ? (size - 1 - myRow) * 4 : myRow * 4;
-        score -= playerId == 1 ? enemyRow * 4 : (size - 1 - enemyRow) * 4;
+        score += playerId == 1 ? (size - 1 - myRow) * 6 : myRow * 6;
+        score -= playerId == 1 ? enemyRow * 6 : (size - 1 - enemyRow) * 6;
 
+        return score;
+    }
+
+    default int endgameDistanceScore(int myDist, int enemyDist) {
+        int score = 0;
+        if (myDist <= 1) {
+            score += 1600;
+        } else if (myDist == 2) {
+            score += 520;
+        } else if (myDist == 3) {
+            score += 180;
+        }
+
+        if (enemyDist <= 1) {
+            score -= 2100;
+        } else if (enemyDist == 2) {
+            score -= 700;
+        } else if (enemyDist == 3) {
+            score -= 240;
+        }
         return score;
     }
 
@@ -290,7 +411,7 @@ public interface Algorithm {
 
                 if (curr.row() == targetRow) return depth;
 
-                for (Position next : board.getAvailableMoves(curr)) {
+                for (Position next : board.getPathNeighbors(curr)) {
                     if (visited.add(next)) {
                         queue.add(next);
                     }

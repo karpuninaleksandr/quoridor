@@ -49,6 +49,25 @@ public class MinimaxAlgorithm implements Algorithm {
         nodesVisited = 0;
         consideredMoves = 0;
 
+        int currentWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
+        Move tacticalMove = findEndgameMove(board, playerId, currentWalls);
+        if (tacticalMove != null) {
+            int tacticalScore = scoreMoveAfterApply(board, tacticalMove, playerId, size, wallsLeft1, wallsLeft2);
+            lastReport = new AlgorithmReport(
+                    getType().getDescription(),
+                    tacticalMove,
+                    tacticalScore,
+                    0,
+                    nodesVisited,
+                    1,
+                    0,
+                    0,
+                    System.currentTimeMillis() - startedAt,
+                    "MiniMax применил эндшпильное правило: немедленная победа или срочная блокировка"
+            );
+            return tacticalMove;
+        }
+
         Move best = null;
         int bestScore = 0;
         int reachedDepth = 0;
@@ -205,6 +224,21 @@ public class MinimaxAlgorithm implements Algorithm {
             return moves;
         }
         return moves.subList(0, 16);
+    }
+
+    private int scoreMoveAfterApply(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
+        Board copy = board.copy();
+        applyMove(copy, move);
+        int newWallsLeft1 = wallsLeft1;
+        int newWallsLeft2 = wallsLeft2;
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            if (move.getPlayerId() == 1) {
+                --newWallsLeft1;
+            } else {
+                --newWallsLeft2;
+            }
+        }
+        return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2);
     }
 
     private record SearchResult(Move move, int score) {

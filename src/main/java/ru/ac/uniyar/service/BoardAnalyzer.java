@@ -28,7 +28,7 @@ public class BoardAnalyzer {
                 if (current.row() == targetRow) {
                     return depth;
                 }
-                for (Position next : board.getAvailableMoves(current)) {
+                for (Position next : board.getPathNeighbors(current)) {
                     if (visited.add(next)) {
                         queue.add(next);
                     }

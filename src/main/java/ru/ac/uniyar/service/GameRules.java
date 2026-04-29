@@ -61,7 +61,7 @@ public class GameRules {
 
             if (cur.row() == targetRow) return true;
 
-            for (Position next : board.getAvailableMoves(cur)) {
+            for (Position next : board.getPathNeighbors(cur)) {
                 if (visited.add(next)) {
                     queue.add(next);
                 }

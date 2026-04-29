@@ -50,6 +50,24 @@ public class MonteCarloAlgorithm implements Algorithm {
 
         long iterations = 0;
         rootPlayerId = playerId;
+        int currentWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
+        Move tacticalMove = findEndgameMove(board, playerId, currentWalls);
+        if (tacticalMove != null) {
+            lastReport = new AlgorithmReport(
+                    getType().getDescription(),
+                    tacticalMove,
+                    scoreMove(board, tacticalMove, playerId, wallsLeft1, wallsLeft2),
+                    0,
+                    0,
+                    1,
+                    0,
+                    0,
+                    System.currentTimeMillis() - startedAt,
+                    "MCTS применил эндшпильное правило до запуска симуляций"
+            );
+            return tacticalMove;
+        }
+
         Node root = new Node(board.copy(), null, null, playerId, wallsLeft1, wallsLeft2);
         while (System.currentTimeMillis() < endTime && iterations < iterationBudget) {
             Node node = select(root);
@@ -75,7 +93,7 @@ public class MonteCarloAlgorithm implements Algorithm {
                 0,
                 0,
                 System.currentTimeMillis() - startedAt,
-                "MCTS: выбор по UCT, rollout с эвристическим сэмплированием ходов"
+                "MCTS: выбор по UCT, rollout с epsilon-greedy эвристикой, немедленными победами и тактическими стенами"
                         + "; лимит времени: " + timeLimit + " мс"
                         + ", бюджет итераций: " + iterationBudget
         );
@@ -231,35 +249,88 @@ public class MonteCarloAlgorithm implements Algorithm {
 
     private Move pickRolloutMove(Board board, List<Move> moves, int currentPlayer, int rootPlayer,
                                  int size, int wallsLeft1, int wallsLeft2) {
-        Move best = null;
-        int bestScore = Integer.MIN_VALUE;
-        int samples = Math.min(12, moves.size());
-
-        for (int k = 0; k < samples; ++k) {
-            Move move = moves.get(random.nextInt(moves.size()));
-            Board tmp = board.copy();
-            applyMove(tmp, move);
-
-            int score = evaluate(tmp, rootPlayer, size, wallsLeft1, wallsLeft2);
-            if (currentPlayer != rootPlayer) {
-                score = -score;
-            }
-            if (score > bestScore) {
-                bestScore = score;
-                best = move;
+        for (Move move : moves) {
+            if (move.getMoveType() == MoveType.MOVE_PLAYER
+                    && move.getEndPosition().row() == getTargetRow(currentPlayer, size)) {
+                return move;
             }
         }
-        return best;
+
+        int walls = currentPlayer == 1 ? wallsLeft1 : wallsLeft2;
+        if (walls > 0 && calculateShortestPath(board, getCurrentPosition(board, 3 - currentPlayer),
+                getTargetRow(3 - currentPlayer, size)) <= 2) {
+            Move tacticalWall = moves.stream()
+                    .filter(move -> move.getMoveType() == MoveType.PLACE_WALL)
+                    .max(Comparator.comparingInt(move -> wallImpact(board, move, currentPlayer, size)))
+                    .orElse(null);
+            if (tacticalWall != null && wallImpact(board, tacticalWall, currentPlayer, size) > 0) {
+                return tacticalWall;
+            }
+        }
+
+        if (random.nextDouble() < 0.22) {
+            return moves.get(random.nextInt(moves.size()));
+        }
+
+        int sampleSize = Math.min(18, moves.size());
+        List<Move> sampled = new ArrayList<>(sampleSize);
+        Set<Integer> usedIndexes = new HashSet<>();
+        while (sampled.size() < sampleSize) {
+            int index = random.nextInt(moves.size());
+            if (usedIndexes.add(index)) {
+                sampled.add(moves.get(index));
+            }
+        }
+
+        sampled.sort((a, b) -> Integer.compare(
+                scoreRolloutMove(board, b, currentPlayer, rootPlayer, size, wallsLeft1, wallsLeft2),
+                scoreRolloutMove(board, a, currentPlayer, rootPlayer, size, wallsLeft1, wallsLeft2)
+        ));
+        int top = Math.max(1, Math.min(4, sampled.size()));
+        return sampled.get(random.nextInt(top));
+    }
+
+    private int scoreRolloutMove(Board board, Move move, int currentPlayer, int rootPlayer,
+                                 int size, int wallsLeft1, int wallsLeft2) {
+        Board tmp = board.copy();
+        applyMove(tmp, move);
+        int newWallsLeft1 = wallsLeft1;
+        int newWallsLeft2 = wallsLeft2;
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            if (currentPlayer == 1) {
+                --newWallsLeft1;
+            } else {
+                --newWallsLeft2;
+            }
+        }
+
+        int score = evaluate(tmp, rootPlayer, size, newWallsLeft1, newWallsLeft2);
+        if (currentPlayer != rootPlayer) {
+            score = -score;
+        }
+        if (currentPlayer == rootPlayer) {
+            score += movementPreference(move, board, currentPlayer, size, recentPositions);
+        }
+        return score;
     }
 
     private int scoreMove(Board board, Move move, int playerId, int wallsLeft1, int wallsLeft2) {
         Board copy = board.copy();
         applyMove(copy, move);
         int size = (int) Math.sqrt(copy.getTiles().size());
+        int newWallsLeft1 = wallsLeft1;
+        int newWallsLeft2 = wallsLeft2;
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            if (move.getPlayerId() == 1) {
+                --newWallsLeft1;
+            } else {
+                --newWallsLeft2;
+            }
+        }
         int preference = playerId == rootPlayerId
                 ? movementPreference(move, board, playerId, size, recentPositions)
                 : 0;
-        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2) + preference;
+        return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2) + preference;
     }
 
     private double normalizedEvaluate(Board board, int playerId, int wallsLeft1, int wallsLeft2) {

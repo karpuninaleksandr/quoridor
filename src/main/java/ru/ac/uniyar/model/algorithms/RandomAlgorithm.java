@@ -5,6 +5,7 @@ import ru.ac.uniyar.model.Move;
 import ru.ac.uniyar.model.Position;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
 import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
+import ru.ac.uniyar.model.enums.MoveType;
 
 import java.util.*;
 
@@ -35,6 +36,16 @@ public class RandomAlgorithm implements Algorithm {
         List<Move> moves = getMoves(board, playerId, amountOfWallsLeft);
 
         if (moves.isEmpty()) return null;
+
+        Move tacticalMove = findEndgameMove(board, playerId, amountOfWallsLeft);
+        if (tacticalMove != null) {
+            lastReport = new AlgorithmReport(getType().getDescription(), tacticalMove,
+                    evaluateAfterMove(board, tacticalMove, playerId, wallsLeft1, wallsLeft2),
+                    0, 1, 1, 0, 0,
+                    System.currentTimeMillis() - startedAt,
+                    "Случайный алгоритм применил эндшпильное правило перед случайным выбором");
+            return tacticalMove;
+        }
 
         Move result;
         switch (hardnessLevel) {
@@ -79,7 +90,16 @@ public class RandomAlgorithm implements Algorithm {
         Board copy = board.copy();
         applyMove(copy, move);
         int size = (int) Math.sqrt(copy.getTiles().size());
-        return evaluate(copy, playerId, size, wallsLeft1, wallsLeft2)
+        int newWallsLeft1 = wallsLeft1;
+        int newWallsLeft2 = wallsLeft2;
+        if (move.getMoveType() == MoveType.PLACE_WALL) {
+            if (move.getPlayerId() == 1) {
+                --newWallsLeft1;
+            } else {
+                --newWallsLeft2;
+            }
+        }
+        return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2)
                 + movementPreference(move, board, playerId, size, recentPositions);
     }
 }
