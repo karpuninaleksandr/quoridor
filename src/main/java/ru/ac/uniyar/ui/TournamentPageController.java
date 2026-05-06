@@ -4,6 +4,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -19,17 +20,15 @@ import ru.ac.uniyar.service.TournamentService;
 import java.util.Arrays;
 
 @Route("/tournament")
+@CssImport("./styles/tournament-page.css")
 public class TournamentPageController extends VerticalLayout {
     public TournamentPageController(TournamentService tournamentService) {
         setSizeFull();
         setAlignItems(Alignment.CENTER);
-        getStyle()
-                .set("background", "#f6f7f9")
-                .set("padding", "28px")
-                .set("box-sizing", "border-box");
+        addClassName("tournament-page");
 
         H1 title = new H1("Турнир ИИ");
-        title.getStyle().set("margin", "0 0 8px");
+        title.addClassName("tournament-page__title");
         ComboBox<String> algorithm1 = new ComboBox<>("ИИ P1");
         algorithm1.setItems(Arrays.stream(ComputerAlgorithmType.values()).map(ComputerAlgorithmType::getDescription).toList());
         addTooltip(algorithm1, "Алгоритм первого участника турнира.");
@@ -57,15 +56,7 @@ public class TournamentPageController extends VerticalLayout {
         addTooltip(games, "Сколько партий подряд сыграют выбранные ИИ.");
 
         Pre result = new Pre();
-        result.setWidth("min(900px, 100%)");
-        result.getStyle()
-                .set("background", "#111827")
-                .set("color", "#e5e7eb")
-                .set("padding", "18px")
-                .set("border-radius", "8px")
-                .set("min-height", "280px")
-                .set("overflow", "auto")
-                .set("box-shadow", "0 12px 28px rgba(15, 23, 42, 0.16)");
+        result.addClassName("tournament-page__logs");
         Button run = new Button("Запустить турнир");
         run.addClickListener(e -> {
             if (algorithm1.getValue() == null || algorithm2.getValue() == null
@@ -108,13 +99,7 @@ public class TournamentPageController extends VerticalLayout {
         addTooltip(back, "Вернуться к стартовому меню.");
 
         HorizontalLayout controls = new HorizontalLayout(algorithm1, algorithm2, hardness1, hardness2, size, games);
-        controls.setWidth("min(900px, 100%)");
-        controls.getStyle()
-                .set("background", "white")
-                .set("padding", "16px")
-                .set("border-radius", "8px")
-                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
-                .set("flex-wrap", "wrap");
+        controls.addClassName("tournament-page__controls");
 
         HorizontalLayout buttons = new HorizontalLayout(run, back);
         add(title, controls, buttons, result);

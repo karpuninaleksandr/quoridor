@@ -1,0 +1,82 @@
+.start-page {
+    background: #f6f7f9;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.start-page__title {
+    margin: 0 0 18px;
+}
+
+.start-page__content {
+    gap: 18px;
+    width: 100%;
+    max-width: 460px;
+    flex-wrap: wrap;
+}
+
+.start-page__menu {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: min(420px, 100%);
+}
+
+.start-page__panel {
+    background: white;
+    padding: 22px;
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    box-sizing: border-box;
+}
+
+.start-page__panel {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+}
+
+.start-page__buttons {
+    flex-wrap: wrap;
+}
+
+.start-page__profile {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #475569;
+    line-height: 1.35;
+    font-size: 13px;
+}
+
+.start-page__rules-dialog::part(content) {
+    padding: 0;
+    border-radius: 8px;
+}
+
+.start-page__rules {
+    width: min(520px, 92vw);
+    background: white;
+    padding: 22px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #1f2937;
+}
+
+.start-page__rules-title {
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 12px;
+}
+
+.start-page__rule-item {
+    padding: 8px 0;
+    border-top: 1px solid #eef2f7;
+    line-height: 1.38;
+    font-size: 14px;
+}
+
+.start-page__rules-close {
+    margin-top: 14px;
+}

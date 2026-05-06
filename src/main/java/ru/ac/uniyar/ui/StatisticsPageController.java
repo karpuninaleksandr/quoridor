@@ -3,6 +3,7 @@ package ru.ac.uniyar.ui;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -14,17 +15,24 @@ import java.time.Duration;
 import java.time.Instant;
 
 @Route("/statistics")
+@CssImport("./styles/statistics-page.css")
 public class StatisticsPageController extends VerticalLayout {
     public StatisticsPageController() {
+        setAlignItems(Alignment.CENTER);
+        addClassName("statistics-page");
         Game game = (Game) VaadinSession.getCurrent().getAttribute("game");
 
-        add(new H1("Статистика игры"));
+        H1 title = new H1("Статистика игры");
+        title.addClassName("statistics-page__title");
 
-        add(new Div(new Text("Количество ходов: " + game.getAmountOfMoves())));
-        add(new Div(new Text("Время игры (c): " + Duration.between(game.getGameTimeStart(), Instant.now()).toSeconds())));
+        Div card = new Div(
+                new Div(new Text("Количество ходов: " + game.getAmountOfMoves())),
+                new Div(new Text("Время игры (c): " + Duration.between(game.getGameTimeStart(), Instant.now()).toSeconds()))
+        );
+        card.addClassName("statistics-page__card");
 
         Button restartButton = new Button("Начать сначала");
         restartButton.addClickListener(e -> UI.getCurrent().navigate("start"));
-        add(restartButton);
+        add(title, card, restartButton);
     }
 }

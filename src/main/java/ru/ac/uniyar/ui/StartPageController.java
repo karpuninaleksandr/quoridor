@@ -8,6 +8,7 @@ import ru.ac.uniyar.service.GameProcessor;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.notification.Notification;
@@ -15,24 +16,23 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.shared.Tooltip;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.component.dependency.CssImport;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 @Route("/start")
+@CssImport("./styles/start-page.css")
 public class StartPageController extends VerticalLayout {
     public StartPageController(GameProcessor gameProcessor) {
         setSizeFull();
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
-        getStyle()
-                .set("background", "#f6f7f9")
-                .set("padding", "24px")
-                .set("box-sizing", "border-box");
+        addClassName("start-page");
 
         H1 title = new H1("Игра «Коридор»");
-        title.getStyle().set("margin", "0 0 18px");
+        title.addClassName("start-page__title");
 
         ComboBox<String> sizeSelector = new ComboBox<>("Размер поля");
         sizeSelector.setItems(Arrays.stream(GameSize.values()).map(GameSize::getDescription).toList());
@@ -81,6 +81,8 @@ public class StartPageController extends VerticalLayout {
         player1Profile.setText("Профиль P1: человек управляет ходами вручную.");
         player2Profile.setText("Профиль P2: " + AlgorithmProfile.describe(player2.getValue()));
 
+        Dialog rulesDialog = createRulesDialog();
+
         Button startButton = new Button("Начать игру", event -> {
             String size = sizeSelector.getValue();
             if (size == null) {
@@ -103,34 +105,32 @@ public class StartPageController extends VerticalLayout {
             gameProcessor.startNewGame(size, player1.getValue(), player2.getValue(), hardness1.getValue(), hardness2.getValue());
             getUI().ifPresent(ui -> ui.navigate("/game"));
         });
+        Button rulesButton = new Button("Правила игры", event -> rulesDialog.open());
         Button tournamentButton = new Button("Турнир ИИ", event -> getUI().ifPresent(ui -> ui.navigate("/tournament")));
         Button comparisonButton = new Button("Сравнение алгоритмов", event -> getUI().ifPresent(ui -> ui.navigate("/comparison")));
+        Button trainingButton = new Button("Обучение весов", event -> getUI().ifPresent(ui -> ui.navigate("/training")));
         addTooltip(startButton, "Обычная партия: человек против ИИ или пошаговый режим ИИ против ИИ.");
+        addTooltip(rulesButton, "Открыть краткое описание правил игры.");
         addTooltip(tournamentButton, "Турнир: серия партий между двумя выбранными алгоритмами с логами и итоговой статистикой.");
         addTooltip(comparisonButton, "Сравнение: матчи всех разных пар алгоритмов без зеркальных повторов.");
+        addTooltip(trainingButton, "Self-play: ИИ играет партии сам с собой и обновляет веса функции оценки по победителю.");
 
         Div panel = new Div(sizeSelector, player1, player1Profile, player2, player2Profile, hardness1, hardness2);
-        panel.getStyle()
-                .set("display", "grid")
-                .set("gap", "12px")
-                .set("width", "100%")
-                .set("background", "white")
-                .set("padding", "22px")
-                .set("border-radius", "8px")
-                .set("box-shadow", "0 12px 28px rgba(15, 23, 42, 0.12)");
+        panel.addClassName("start-page__panel");
 
-        HorizontalLayout buttons = new HorizontalLayout(startButton, tournamentButton, comparisonButton);
+        HorizontalLayout buttons = new HorizontalLayout(startButton, rulesButton, tournamentButton, comparisonButton, trainingButton);
         buttons.setJustifyContentMode(JustifyContentMode.CENTER);
-        buttons.getStyle().set("flex-wrap", "wrap");
+        buttons.addClassName("start-page__buttons");
 
         Div menuColumn = new Div(panel, buttons);
-        menuColumn.getStyle()
-                .set("display", "flex")
-                .set("flex-direction", "column")
-                .set("gap", "14px")
-                .set("width", "min(420px, 100%)");
+        menuColumn.addClassName("start-page__menu");
 
-        add(title, menuColumn);
+        HorizontalLayout content = new HorizontalLayout(menuColumn);
+        content.setAlignItems(Alignment.STRETCH);
+        content.setJustifyContentMode(JustifyContentMode.CENTER);
+        content.addClassName("start-page__content");
+
+        add(title, content);
     }
 
     private void addTooltip(Component component, String text) {
@@ -143,14 +143,44 @@ public class StartPageController extends VerticalLayout {
     private Div createProfileBlock(String title, String text) {
         Div profile = new Div();
         profile.setText(title + ": " + text);
-        profile.getStyle()
-                .set("background", "#f8fafc")
-                .set("border", "1px solid #e5e7eb")
-                .set("border-radius", "8px")
-                .set("padding", "10px 12px")
-                .set("color", "#475569")
-                .set("line-height", "1.35")
-                .set("font-size", "13px");
+        profile.addClassName("start-page__profile");
         return profile;
+    }
+
+    private Dialog createRulesDialog() {
+        Dialog dialog = new Dialog();
+        dialog.addClassName("start-page__rules-dialog");
+
+        Div card = new Div();
+        card.addClassName("start-page__rules");
+
+        Div title = new Div();
+        title.setText("Правила игры");
+        title.addClassName("start-page__rules-title");
+
+        Button close = new Button("Закрыть", event -> dialog.close());
+        close.addClassName("start-page__rules-close");
+
+        card.add(
+                title,
+                createRuleItem("Цель", "первым дойти своей фишкой до противоположной стороны поля."),
+                createRuleItem("Ход", "можно либо передвинуть фишку, либо поставить одну стену."),
+                createRuleItem("Фишка", "ходит на соседнюю свободную клетку по вертикали или горизонтали."),
+                createRuleItem("Прыжок", "если рядом стоит соперник, можно перепрыгнуть через него; если прямо нельзя, разрешен диагональный обход."),
+                createRuleItem("Стена", "занимает два промежутка между клетками и блокирует проход в этом месте."),
+                createRuleItem("Ограничение", "стену нельзя поставить так, чтобы у любого игрока пропал путь к финишу."),
+                createRuleItem("Победа", "партия заканчивается сразу, когда фишка достигает целевой строки."),
+                close
+        );
+
+        dialog.add(card);
+        return dialog;
+    }
+
+    private Div createRuleItem(String label, String text) {
+        Div item = new Div();
+        item.setText(label + ": " + text);
+        item.addClassName("start-page__rule-item");
+        return item;
     }
 }

@@ -1,0 +1,16 @@
+timestamp,source,winnerId,sampleCount,gradientPath,gradientMyMobility,gradientEnemyMobility,gradientWall,gradientProgress,gradientMyEndgame,gradientEnemyEndgame,beforePath,beforeMyMobility,beforeEnemyMobility,beforeWall,beforeProgress,beforeMyEndgame,beforeEnemyEndgame,beforeSamples,afterPath,afterMyMobility,afterEnemyMobility,afterWall,afterProgress,afterMyEndgame,afterEnemyEndgame,afterSamples
+2026-05-04T17:41:43.273233,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 1/20",1,57,19,-3,4,-4,8,10,0,108,5,9,7,14,171,175,189,109,4,10,6,15,172,175,246
+2026-05-04T17:52:33.569468,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 1/20",1,77,5,-1,1,0,5,10,0,109,4,10,6,15,172,175,246,110,3,11,6,16,173,175,323
+2026-05-04T17:59:00.466501,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 2/20",1,98,10,4,-3,0,4,11,-1,110,3,11,6,16,173,175,323,111,4,10,6,17,174,174,421
+2026-05-04T18:02:59.601216,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 3/20",1,47,23,-1,1,-1,6,10,0,111,4,10,6,17,174,174,421,112,3,11,5,18,175,174,468
+2026-05-04T18:07:23.270649,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 4/20",1,56,29,0,0,-5,7,18,-8,112,3,11,5,18,175,174,468,113,3,11,4,19,176,173,524
+2026-05-04T18:12:38.668650,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 5/20",1,63,10,-2,3,-6,7,15,-5,113,3,11,4,19,176,173,524,114,2,12,4,20,177,172,587
+2026-05-04T18:18:41.879592,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 6/20",2,87,5,2,-2,0,2,10,0,114,2,12,4,20,177,172,587,115,3,11,4,21,178,172,674
+2026-05-04T18:23:43.089523,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 7/20",2,78,3,0,1,0,3,9,0,115,3,11,4,21,178,172,674,116,3,12,4,22,179,172,752
+2026-05-04T18:29:58.837748,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 8/20",1,70,16,1,0,3,3,10,0,116,3,12,4,22,179,172,752,117,4,12,5,23,180,172,822
+2026-05-04T18:38:31.775078,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 9/20",1,125,4,1,0,1,3,12,-2,117,4,12,5,23,180,172,822,118,5,12,6,24,181,171,947
+2026-05-04T18:47:05.648709,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 10/20",1,116,12,1,0,2,8,10,0,118,5,12,6,24,181,171,947,119,6,12,7,25,182,171,1063
+2026-05-04T18:52:21.389783,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 11/20",1,65,14,-2,2,0,2,10,0,119,6,12,7,25,182,171,1063,120,5,13,7,25,183,171,1128
+2026-05-04T19:00:18.468769,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 12/20",2,123,18,7,-7,3,3,10,0,120,5,13,7,25,183,171,1128,120,6,12,8,25,184,171,1251
+2026-05-04T19:06:57.345634,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 13/20",1,89,14,0,0,7,8,10,0,120,6,12,8,25,184,171,1251,120,6,12,9,25,185,171,1340
+2026-05-04T19:11:07.851391,"self-play AlphaBeta(Сложный) vs MonteCarlo(Сложный), game 14/20",1,48,13,1,0,-3,7,12,-2,120,6,12,9,25,185,171,1340,120,7,12,8,25,186,170,1388

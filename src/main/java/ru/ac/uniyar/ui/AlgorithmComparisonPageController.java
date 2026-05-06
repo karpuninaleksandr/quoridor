@@ -4,6 +4,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Pre;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -23,17 +24,15 @@ import java.util.List;
 import java.util.Map;
 
 @Route("/comparison")
+@CssImport("./styles/comparison-page.css")
 public class AlgorithmComparisonPageController extends VerticalLayout {
     public AlgorithmComparisonPageController(TournamentService tournamentService) {
         setSizeFull();
         setAlignItems(Alignment.CENTER);
-        getStyle()
-                .set("background", "#f6f7f9")
-                .set("padding", "28px")
-                .set("box-sizing", "border-box");
+        addClassName("comparison-page");
 
         H1 title = new H1("Сравнение алгоритмов");
-        title.getStyle().set("margin", "0 0 8px");
+        title.addClassName("comparison-page__title");
 
         ComboBox<String> randomHardness = createHardnessSelector("Сложность Random");
         ComboBox<String> minimaxHardness = createHardnessSelector("Сложность MiniMax");
@@ -56,15 +55,7 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
         addTooltip(games, "Сколько партий сыграет каждая пара разных алгоритмов.");
 
         Pre result = new Pre();
-        result.setWidth("min(1100px, 100%)");
-        result.getStyle()
-                .set("background", "#111827")
-                .set("color", "#e5e7eb")
-                .set("padding", "18px")
-                .set("border-radius", "8px")
-                .set("min-height", "360px")
-                .set("overflow", "auto")
-                .set("box-shadow", "0 12px 28px rgba(15, 23, 42, 0.16)");
+        result.addClassName("comparison-page__logs");
 
         Button run = new Button("Сравнить");
         run.addClickListener(event -> {
@@ -115,13 +106,7 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
                 size,
                 games
         );
-        controls.setWidth("min(1100px, 100%)");
-        controls.getStyle()
-                .set("background", "white")
-                .set("padding", "16px")
-                .set("border-radius", "8px")
-                .set("box-shadow", "0 8px 20px rgba(15, 23, 42, 0.08)")
-                .set("flex-wrap", "wrap");
+        controls.addClassName("comparison-page__controls");
 
         add(title, controls, new HorizontalLayout(run, back), result);
     }

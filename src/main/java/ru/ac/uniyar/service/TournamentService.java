@@ -257,7 +257,7 @@ public class TournamentService {
             if (current.row() == targetRow) {
                 return true;
             }
-            for (Position next : board.getAvailableMoves(current)) {
+            for (Position next : board.getPathNeighbors(current)) {
                 if (visited.add(next)) {
                     queue.add(next);
                 }
