@@ -569,49 +569,59 @@ $r \leftarrow$ корневой узел с состоянием $s$\;
 
 \section{Техническая реализация}
 
-Игровое приложение написано на языке программирования Java версии 17 с использованием фреймворка Spring Boot версии 3.2.5, а также библиотеки Vaadin версии 24.4.2, обеспечивающей отрисовку игрового поля и взаимодействие с пользователем через веб-интерфейс. Для сокращения шаблонного кода используется библиотека Lombok. Система сборки "--- Maven.
+Игровое приложение <<Коридор>> написано на языке программирования Java версии 17 с использованием фреймворка Spring Boot версии 3.2.5, а также библиотеки Vaadin версии 24.4.2, которая отвечает за веб-интерфейс. Для сокращения шаблонного кода используется библиотека Lombok. Система сборки кода "--- Maven.
 
 Архитектура приложения разделена на несколько независимых слоёв. Общая схема взаимодействия слоёв представлена на рисунке~\ref{fig:architecture}.
 
 \begin{figure}[h]
     \centering
     \begin{tikzpicture}[
-        node distance=0.75cm,
+        node distance=0.65cm and 0.85cm,
         layer/.style={
             rectangle,
             rounded corners,
             draw=black!55,
             fill=gray!8,
-            text width=10.5cm,
+            text width=5.25cm,
             align=center,
-            minimum height=1.05cm
+            minimum height=1.05cm,
+            font=\small
         },
-        arr/.style={-{Latex[length=3mm]}, thick}
+        wide/.style={
+            layer,
+            text width=11.2cm
+        },
+        arr/.style={-{Latex[length=2.5mm]}, thick}
     ]
-        \node[layer] (ui) {\textbf{UI Vaadin}\\ \texttt{StartPageController}, \texttt{GamePageController}, \texttt{TournamentPageController}, \texttt{AlgorithmComparisonPageController}};
-        \node[layer, below=of ui] (service) {\textbf{Сервисный слой}\\ \texttt{GameProcessor}, \texttt{GameRules}, \texttt{TournamentService}, \texttt{SelfPlayTrainingService}, \texttt{BoardAnalyzer}};
-        \node[layer, below=of service] (ai) {\textbf{Модуль стратегического поведения}\\ \texttt{RandomAlgorithm}, \texttt{MinimaxAlgorithm}, \texttt{AlphaBetaAlgorithm}, \texttt{MonteCarloAlgorithm}};
-        \node[layer, below=of ai] (model) {\textbf{Игровая модель}\\ \texttt{Game}, \texttt{Board}, \texttt{BoardTile}, \texttt{Move}, \texttt{Position}, \texttt{Player}};
-        \node[layer, below=of model] (storage) {\textbf{Файлы данных}\\ \texttt{data/evaluation-weights.properties}, \texttt{data/evaluation-weights-history.csv}};
-        \draw[arr] (ui) -- (service);
-        \draw[arr] (service) -- (ai);
+        \node[wide] (ui) {\textbf{UI Vaadin}\\ \texttt{StartPageController}, \texttt{GamePageController}, \texttt{TournamentPageController},\\ \texttt{AlgorithmComparisonPageController}, \texttt{SelfPlayTrainingPageController}};
+        \node[layer, below left=of ui.south] (service) {\textbf{Сервисный слой}\\ \texttt{GameProcessor}, \texttt{GameRules}, \texttt{TournamentService}, \texttt{BoardAnalyzer}};
+        \node[layer, below right=of ui.south] (ai) {\textbf{Модуль стратегического поведения}\\ \texttt{RandomAlgorithm}, \texttt{MinimaxAlgorithm}, \texttt{AlphaBetaAlgorithm}, \texttt{MonteCarloAlgorithm}};
+        \node[layer, below=of service] (model) {\textbf{Игровая модель}\\ \texttt{Game}, \texttt{Board}, \texttt{BoardTile}, \texttt{Move}, \texttt{Position}, \texttt{Player}};
+        \node[layer, below=of ai] (evaluation) {\textbf{Функция оценки}\\ \texttt{EvaluationFeatures}, \texttt{EvaluationWeights}, \texttt{EvaluationWeightsStore}};
+        \node[layer, below=of model] (training) {\textbf{Обучение весов}\\ \texttt{SelfPlayTrainingService}, \texttt{SelfPlayTrainingResult},\\ \texttt{EvaluationLearningSample}, \texttt{EvaluationTrainingUpdate}};
+        \node[layer, below=of evaluation] (storage) {\textbf{Файлы данных}\\ \texttt{evaluation-weights.properties}, \texttt{evaluation-weights-history.csv}};
+        \draw[arr] (ui.south) -- (service.north);
+        \draw[arr] (ui.south) -- (ai.north);
         \draw[arr] (service) -- (model);
-        \draw[arr] (ai) -- (model);
-        \draw[arr] (ai) -- (storage);
+        \draw[arr] (service.east) -- (ai.west);
+        \draw[arr] (ai) -- (evaluation);
+        \draw[arr] (model) -- (training);
+        \draw[arr] (training.east) -- (storage.west);
+        \draw[arr] (evaluation) -- (storage);
     \end{tikzpicture}
     \caption{Общая архитектура приложения}
     \label{fig:architecture}
 \end{figure}
 
-\textit{Модель} (\texttt{ru.ac.uniyar.model}) содержит классы, описывающие игровые объекты. Класс \texttt{Position} хранит координаты клетки $(i, j)$ и предоставляет метод \texttt{move(rowDelta, colDelta)} для вычисления соседней позиции. Класс \texttt{BoardTile} описывает одну клетку поля четырьмя булевыми флагами доступности переходов. Класс \texttt{Board} хранит граф поля в виде \texttt{HashMap<Position, BoardTile>}, позиции фишек обоих игроков и реализует все операции с доской: размещение перегородок (\texttt{placeWall}), получение доступных ходов (\texttt{getAvailableMoves}), обход для BFS (\texttt{getPathNeighbors}) и полное копирование (\texttt{copy}). Класс \texttt{Move} описывает ход: его тип (\texttt{MOVE\_PLAYER} или \texttt{PLACE\_WALL}), идентификатор игрока и позиции начала и конца. Класс \texttt{Game} хранит конфигурацию текущей партии: размер поля (\texttt{GameSize}), ссылки на игроков, номер текущего хода, время начала и флаг завершения.
+\textit{Модель} (\texttt{ru.ac.uniyar.model}) содержит классы, описывающие игровые объекты. Класс \texttt{Position} хранит координаты клетки $(i, j)$ и предоставляет метод \texttt{move(rowDelta, colDelta)} для вычисления соседней позиции. Класс \texttt{BoardTile} описывает одну клетку поля четырьмя булевыми флагами доступности переходов. Класс \texttt{Board} хранит граф поля в виде \texttt{HashMap<Position, BoardTile>}, позиции фишек обоих игроков и реализует все операции с доской: размещение перегородок (\texttt{placeWall}), получение доступных ходов (\texttt{getAvailableMoves})и полное копирование (\texttt{copy}). Класс \texttt{Move} описывает ход: его тип (\texttt{MOVE\_PLAYER} или \texttt{PLACE\_WALL}), идентификатор игрока и позиции начала и конца перемещения или стены. Класс \texttt{Game} хранит конфигурацию текущей партии: размер игрового поля (\texttt{GameSize}), объекты игроков, номер текущего хода, время начала игры и флаг ее завершения.
 
-\textit{Игроки} (\texttt{ru.ac.uniyar.model.players}) реализуют иерархию через абстрактный класс \texttt{Player} с методом \texttt{getMove}. Класс \texttt{HumanPlayer} возвращает \texttt{null} (ход запрашивается через UI); класс \texttt{ComputerPlayer} делегирует вызов конкретному объекту \texttt{Algorithm}. Фабрика \texttt{ComputerPlayerFabric} создаёт нужную реализацию алгоритма по типу и уровню сложности.
+\textit{Игроки} (\texttt{ru.ac.uniyar.model.players}) реализуют иерархию через абстрактный класс \texttt{Player} с методом \texttt{getMove}. Класс \texttt{HumanPlayer} возвращает \texttt{null}, поскольку ход игрока получается через его взаимодействие с интерфейсом игрового приложения; класс \texttt{ComputerPlayer} делегирует вызов конкретному объекту \texttt{Algorithm}. Фабрика \texttt{ComputerPlayerFabric} создаёт нужную реализацию алгоритма по типу и уровню сложности в соответствии с предпочтениями пользователя приложения.
 
-\textit{Алгоритмы} (\texttt{ru.ac.uniyar.model.algorithms}) описаны в главе 2. Все реализуют интерфейс \texttt{Algorithm}. Класс \texttt{AlgorithmReport} является неизменяемой записью с результатами последнего хода: выбранный ход, оценка, достигнутая глубина, число рассмотренных узлов, число отсечений, число попаданий в таблицу транспозиций, время в миллисекундах и текстовое пояснение. Класс \texttt{EvaluationFeatures} хранит вектор признаков состояния; \texttt{EvaluationWeights} "--- веса; \texttt{EvaluationWeightsStore} управляет загрузкой и сохранением весов.
+\textit{Алгоритмы} (\texttt{ru.ac.uniyar.model.algorithms}) описаны в главе 2. Каждый из них реализует интерфейс \texttt{Algorithm}. Класс \texttt{AlgorithmReport} является неизменяемой записью с результатами последнего хода: выбранный ход, его оценка, достигнутая глубина поиска, количество рассмотренных узлов, количество отсечений ветвей дерева игры, время в миллисекундах, затраченное на анализ хода и его текстовое пояснение. Класс \texttt{EvaluationFeatures} хранит вектор признаков состояния; \texttt{EvaluationWeights} "--- веса; \texttt{EvaluationWeightsStore} управляет загрузкой и сохранением весов для историчности.
 
-\textit{Сервисный слой} (\texttt{ru.ac.uniyar.service}) включает три компонента. \texttt{BoardFactory} создаёт начальное состояние доски заданного размера. \texttt{GameRules} проверяет корректность установки перегородки через BFS и конвертирует координаты рендера в игровые координаты. \texttt{GameProcessor} "--- аннотированный \texttt{@SessionScope} Spring-компонент, управляющий всем жизненным циклом партии: запуск (\texttt{startNewGame}), выполнение ходов (\texttt{makeMove}, \texttt{makeComputerMove}), режим воспроизведения (\texttt{replayPrevious/Next/Live}), сбор образцов для обучения весов и получение подсказок от всех четырёх алгоритмов. \texttt{BoardAnalyzer} формирует текстовые пояснения к ходам ИИ. \texttt{TournamentService} реализует автоматические серии партий для турнира и сравнения алгоритмов.
+\textit{Сервисный слой} (\texttt{ru.ac.uniyar.service}) включает несколько компонентов. \texttt{BoardFactory} создаёт начальное состояние доски заданного размера. Класс \texttt{GameRules} проверяет корректность установки стены и конвертирует координаты поля на пользовательском интерфейса в игровые координаты, понятные алгоритмам. \texttt{GameProcessor} "--- аннотированный \texttt{@SessionScope} Spring-компонент, управляющий всем жизненным циклом партии: запуск (\texttt{startNewGame}), выполнение ходов (\texttt{makeMove}, \texttt{makeComputerMove}), сбор образцов для обучения весов и получение подсказок от всех четырёх алгоритмов в случае запроса таковых от пользователя приложения. \texttt{BoardAnalyzer} формирует текстовые пояснения к ходам ИИ. \texttt{TournamentService} позволяет запускать автоматические серии партий для турнира и сравнения алгоритмов. \texttt{SelfPlayTrainingService} отвечает за обучение весов параметров функции оценки: проводит партии между алгоритмами, собирает объекты \texttt{EvaluationLearningSample}, передаёт их в \texttt{EvaluationWeightsStore} и возвращает результат обучения в виде объекта \texttt{SelfPlayTrainingResult}.
 
-\textit{Интерфейсный слой} (\texttt{ru.ac.uniyar.ui}) реализован через компоненты Vaadin. \texttt{StartPageController} отображает стартовый экран с выбором режима и параметров. \texttt{GamePageController} реализует основной экран игры: отрисовку доски в виде сетки \texttt{Div}-элементов, панель информации (\texttt{GameInfoPanel}), историю ходов (\texttt{GameHistoryPanel}), кнопки управления. \texttt{TournamentPageController} и \texttt{AlgorithmComparisonPageController} реализуют соответствующие режимы.
+\textit{Интерфейсный слой} (\texttt{ru.ac.uniyar.ui}) реализован через библиотечные компоненты Vaadin. \texttt{StartPageController} отображает стартовый экран с выбором режима и параметров. \texttt{GamePageController} реализует основной экран игры: отрисовку игровой доски в виде сетки, историю ходов (\texttt{GameHistoryPanel}), кнопки управления. \texttt{TournamentPageController}, \texttt{AlgorithmComparisonPageController} и \texttt{SelfPlayTrainingPageController} реализуют отображение режимов турнира, сравнения алгоритмов и обучения весов функции оценки.
 
 \section{Взаимодействие с приложением}
 
