@@ -98,7 +98,10 @@ public class TournamentService {
                         hardnessByAlgorithm.get(first.getDescription()),
                         hardnessByAlgorithm.get(second.getDescription()),
                         gameSize,
-                        games
+                        games,
+                        pairNumber,
+                        totalPairs,
+                        logger
                 ));
             }
         }
@@ -107,25 +110,44 @@ public class TournamentService {
 
     private AlgorithmComparisonResult runComparisonPair(String algorithm1, String algorithm2,
                                                         String hardness1, String hardness2,
-                                                        GameSize gameSize, int games) {
+                                                        GameSize gameSize, int games,
+                                                        int pairNumber, int totalPairs,
+                                                        Consumer<String> logger) {
         int wins1 = 0;
         int wins2 = 0;
         int draws = 0;
         int totalMoves = 0;
         ComparisonMetrics metrics = new ComparisonMetrics();
+        int totalComparisonGames = totalPairs * games;
+        int completedBeforePair = (pairNumber - 1) * games;
 
         for (int i = 0; i < games; ++i) {
+            int gameNumber = i + 1;
+            int globalGameNumber = completedBeforePair + gameNumber;
+            int gamesLeftAfterCurrent = totalComparisonGames - globalGameNumber;
+            logger.accept("  Партия " + gameNumber + "/" + games
+                    + " в паре " + pairNumber + "/" + totalPairs
+                    + " (общая " + globalGameNumber + "/" + totalComparisonGames + ")"
+                    + ": начинает P" + (i % 2 == 0 ? 1 : 2)
+                    + ", после нее останется партий сравнения: " + gamesLeftAfterCurrent);
             Game game = createGame(algorithm1, algorithm2, hardness1, hardness2, gameSize, i % 2 == 0 ? 1 : 2);
-            int winner = play(game, 300, ignored -> {
-            }, i + 1, games, games - i - 1, metrics);
+            int winner = play(game, 300, logger, gameNumber, games, games - gameNumber, metrics);
             totalMoves += game.getAmountOfMoves();
             if (winner == 1) {
                 wins1++;
+                logger.accept("    Победил " + algorithm1 + " (P1) за " + game.getAmountOfMoves() + " ходов");
             } else if (winner == 2) {
                 wins2++;
+                logger.accept("    Победил " + algorithm2 + " (P2) за " + game.getAmountOfMoves() + " ходов");
             } else {
                 draws++;
+                logger.accept("    Ничья/лимит после " + game.getAmountOfMoves() + " ходов");
             }
+            logger.accept("    Счет в текущей паре: " + algorithm1 + "=" + wins1
+                    + ", " + algorithm2 + "=" + wins2
+                    + ", ничьи=" + draws);
+            logger.accept("    Прогресс сравнения: завершено " + globalGameNumber + "/" + totalComparisonGames
+                    + ", осталось партий: " + gamesLeftAfterCurrent);
         }
 
         return new AlgorithmComparisonResult(
