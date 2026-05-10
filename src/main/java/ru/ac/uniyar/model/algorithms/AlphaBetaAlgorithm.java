@@ -136,8 +136,9 @@ public class AlphaBetaAlgorithm implements Algorithm {
      */
     private SearchResult search(Board board, int depth, int playerId, int size,
                                 int wallsLeft1, int wallsLeft2, long endTime) {
-        List<Move> moves = new ArrayList<>(getMoves(board, playerId, wallsLeft1).stream()
-                .filter(move -> isRootMoveLegal(board, move, playerId, wallsLeft1))
+        int currentWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
+        List<Move> moves = new ArrayList<>(getMoves(board, playerId, currentWalls).stream()
+                .filter(move -> isRootMoveLegal(board, move, playerId, currentWalls))
                 .toList());
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0, null);
         if (moves.size() > 36) {
