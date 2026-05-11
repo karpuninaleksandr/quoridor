@@ -15,8 +15,7 @@ public final class EvaluationWeightsStore {
     private static final Path HISTORY_FILE = Path.of("data", "evaluation-weights-history.csv");
     private static EvaluationWeights current;
 
-    private EvaluationWeightsStore() {
-    }
+    private EvaluationWeightsStore() {}
 
     public static synchronized EvaluationWeights current() {
         if (current == null) {
@@ -25,9 +24,7 @@ public final class EvaluationWeightsStore {
         return current;
     }
 
-    public static synchronized EvaluationTrainingUpdate learnFromGame(List<EvaluationLearningSample> samples,
-                                                                      int winnerId,
-                                                                      String source) {
+    public static synchronized EvaluationTrainingUpdate learnFromGame(List<EvaluationLearningSample> samples, int winnerId, String source) {
         EvaluationWeights beforeWeights = current();
         if (samples.isEmpty() || winnerId == 0) {
             return new EvaluationTrainingUpdate(false, winnerId, samples.size(), new int[7], beforeWeights, beforeWeights);
@@ -94,39 +91,13 @@ public final class EvaluationWeightsStore {
 
     private static String serialize(EvaluationWeights weights) {
         return """
-                # Learned evaluation weights for Quoridor AI.
-                # Файл можно редактировать вручную; при следующем сохранении комментарии будут сохранены.
-                #
-                # pathAdvantage - вес разницы кратчайших путей: путь соперника минус путь ИИ.
-                # Чем больше значение, тем сильнее ИИ стремится сокращать свой путь и удлинять путь соперника.
                 pathAdvantage=%d
-                
-                # myMobility - вес количества доступных ходов фишкой для ИИ.
-                # Увеличивает ценность позиций, где у ИИ больше вариантов движения.
                 myMobility=%d
-                
-                # enemyMobility - штраф за количество доступных ходов фишкой у соперника.
-                # Чем больше значение, тем сильнее ИИ старается ограничивать мобильность противника.
                 enemyMobility=%d
-                
-                # wallAdvantage - вес преимущества по оставшимся стенам: стены ИИ минус стены соперника.
-                # Помогает не тратить стены без необходимости и ценить запас стен в эндшпиле.
                 wallAdvantage=%d
-                
-                # progressAdvantage - вес продвижения к целевой линии относительно соперника.
-                # Нужен, чтобы алгоритм не зацикливался на равных по длине пути позициях.
                 progressAdvantage=%d
-                
-                # myEndgame - бонус за близость ИИ к победной линии.
-                # Работает особенно сильно, когда до цели осталось 1-3 хода.
                 myEndgame=%d
-                
-                # enemyEndgame - штраф за близость соперника к победной линии.
-                # Чем больше значение, тем охотнее ИИ срочно блокирует финиш соперника.
                 enemyEndgame=%d
-                
-                # samples - сколько ходов ИИ участвовало в принятых обновлениях после завершения партий.
-                # Веса меняются не после отдельного хода, а после партии, на основании победителя.
                 samples=%d
                 """.formatted(
                 weights.pathAdvantage(),
@@ -140,8 +111,7 @@ public final class EvaluationWeightsStore {
         );
     }
 
-    private static void appendHistory(String source, int winnerId, int sampleCount, int[] gradient,
-                                      EvaluationWeights before, EvaluationWeights after) {
+    private static void appendHistory(String source, int winnerId, int sampleCount, int[] gradient, EvaluationWeights before, EvaluationWeights after) {
         try {
             Files.createDirectories(HISTORY_FILE.getParent());
             if (!Files.exists(HISTORY_FILE)) {
@@ -161,8 +131,7 @@ public final class EvaluationWeightsStore {
                 + "afterPath,afterMyMobility,afterEnemyMobility,afterWall,afterProgress,afterMyEndgame,afterEnemyEndgame,afterSamples\n";
     }
 
-    private static String historyRow(String source, int winnerId, int sampleCount, int[] gradient,
-                                     EvaluationWeights before, EvaluationWeights after) {
+    private static String historyRow(String source, int winnerId, int sampleCount, int[] gradient, EvaluationWeights before, EvaluationWeights after) {
         return String.join(",",
                 LocalDateTime.now().toString(),
                 escape(source),

@@ -8,9 +8,6 @@ import ru.ac.uniyar.model.enums.*;
 import java.util.*;
 
 public class MinimaxAlgorithm implements Algorithm {
-    /**
-     * уже посчитанные ранее позиции
-     */
     private final Map<String, Integer> cache = new HashMap<>();
     private AlgorithmReport lastReport;
     private long nodesVisited;
@@ -32,11 +29,6 @@ public class MinimaxAlgorithm implements Algorithm {
         this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
-    /**
-     * пока есть время, итеративно увеличиваем глубину поиска решения
-     * если время кончилось -> отдаем лучшее, что нашли
-     * MiniMax оставлен как честный перебор без alpha-beta отсечений
-     */
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
         long startedAt = System.currentTimeMillis();
@@ -53,18 +45,7 @@ public class MinimaxAlgorithm implements Algorithm {
         Move tacticalMove = findEndgameMove(board, playerId, currentWalls);
         if (tacticalMove != null) {
             int tacticalScore = scoreMoveAfterApply(board, tacticalMove, playerId, size, wallsLeft1, wallsLeft2);
-            lastReport = new AlgorithmReport(
-                    getType().getDescription(),
-                    tacticalMove,
-                    tacticalScore,
-                    0,
-                    nodesVisited,
-                    1,
-                    0,
-                    0,
-                    System.currentTimeMillis() - startedAt,
-                    "MiniMax применил эндшпильное правило: немедленная победа или срочная блокировка"
-            );
+            lastReport = new AlgorithmReport(getType().getDescription(), tacticalMove, tacticalScore, 0, nodesVisited, 1, 0, 0, System.currentTimeMillis() - startedAt, "MiniMax применил эндшпильное правило: немедленная победа или срочная блокировка");
             return tacticalMove;
         }
 
@@ -82,19 +63,7 @@ public class MinimaxAlgorithm implements Algorithm {
                 reachedDepth = depth;
             }
         }
-        lastReport = new AlgorithmReport(
-                getType().getDescription(),
-                best,
-                bestScore,
-                reachedDepth,
-                nodesVisited,
-                consideredMoves,
-                0,
-                0,
-                System.currentTimeMillis() - startedAt,
-                "MiniMax перебрал дерево без alpha-beta отсечений"
-                        + "; лимит времени: " + timeLimit + " мс"
-        );
+        lastReport = new AlgorithmReport(getType().getDescription(), best, bestScore, reachedDepth, nodesVisited, consideredMoves, 0, 0, System.currentTimeMillis() - startedAt, "MiniMax перебрал дерево без alpha-beta отсечений; лимит времени: " + timeLimit + " мс");
         return best;
     }
 
@@ -118,21 +87,9 @@ public class MinimaxAlgorithm implements Algorithm {
         };
     }
 
-    /**
-     * генерируем всевозможные ходы, сортируем по быстрой оценке,
-     * отбираем ограниченное количество и прогоняем через minimax
-     */
-    private SearchResult search(Board board, int depth, int playerId, int size,
-                                int wallsLeft1, int wallsLeft2, long endTime) {
+    private SearchResult search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
         int currentWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
-        List<Move> moves = orderedLimitedMoves(
-                board,
-                getMoves(board, playerId, currentWalls),
-                playerId,
-                size,
-                wallsLeft1,
-                wallsLeft2
-        );
+        List<Move> moves = orderedLimitedMoves(board, getMoves(board, playerId, currentWalls), playerId, size, wallsLeft1, wallsLeft2);
         consideredMoves += moves.size();
 
         Move bestMove = null;
@@ -165,13 +122,7 @@ public class MinimaxAlgorithm implements Algorithm {
         return new SearchResult(bestMove, bestValue);
     }
 
-    /**
-     * если max = true (наш ход) - максимизируем оценку
-     * если max = false (ход противника) - минимизируем
-     */
-    private int minimax(Board board, int depth, boolean maximizing,
-                        int playerId, int size,
-                        int wallsLeft1, int wallsLeft2, long endTime) {
+    private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
         nodesVisited++;
         if (System.currentTimeMillis() > endTime) {
             return evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
@@ -195,14 +146,7 @@ public class MinimaxAlgorithm implements Algorithm {
 
         int current = maximizing ? playerId : (3 - playerId);
         int walls = current == 1 ? wallsLeft1 : wallsLeft2;
-        List<Move> moves = orderedLimitedMoves(
-                board,
-                getMoves(board, current, walls),
-                playerId,
-                size,
-                wallsLeft1,
-                wallsLeft2
-        );
+        List<Move> moves = orderedLimitedMoves(board, getMoves(board, current, walls), playerId, size, wallsLeft1, wallsLeft2);
         consideredMoves += moves.size();
 
         int best = maximizing ? Integer.MIN_VALUE : Integer.MAX_VALUE;
@@ -231,11 +175,7 @@ public class MinimaxAlgorithm implements Algorithm {
         return best;
     }
 
-    /**
-     * ограничение ширины перебора, чтобы обычный MiniMax не зависал на большом поле
-     */
-    private List<Move> orderedLimitedMoves(Board board, List<Move> moves, int playerId, int size,
-                                           int wallsLeft1, int wallsLeft2) {
+    private List<Move> orderedLimitedMoves(Board board, List<Move> moves, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         List<Move> ordered = new ArrayList<>(moves);
         ordered.sort((a, b) -> Integer.compare(
                 scoreMoveForOrdering(board, b, playerId, size, wallsLeft1, wallsLeft2),
@@ -248,8 +188,7 @@ public class MinimaxAlgorithm implements Algorithm {
     }
 
     private int scoreMoveForOrdering(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
-        return scoreMoveAfterApply(board, move, playerId, size, wallsLeft1, wallsLeft2)
-                + movementPreference(move, board, playerId, size, recentPositions);
+        return scoreMoveAfterApply(board, move, playerId, size, wallsLeft1, wallsLeft2) + movementPreference(move, board, playerId, size, recentPositions);
     }
 
     private int scoreMoveAfterApply(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
@@ -267,6 +206,5 @@ public class MinimaxAlgorithm implements Algorithm {
         return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2);
     }
 
-    private record SearchResult(Move move, int score) {
-    }
+    private record SearchResult(Move move, int score) {}
 }

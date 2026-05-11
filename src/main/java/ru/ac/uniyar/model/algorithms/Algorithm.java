@@ -20,8 +20,7 @@ public interface Algorithm {
         return null;
     }
 
-    default void setRecentPositions(List<Position> recentPositions) {
-    }
+    default void setRecentPositions(List<Position> recentPositions) {}
 
     default int movementPreference(Move move, Board board, int playerId, int size, List<Position> recentPositions) {
         if (move.getMoveType() != MoveType.MOVE_PLAYER || move.getPlayerId() != playerId) {
@@ -70,10 +69,8 @@ public interface Algorithm {
 
         int size = (int) Math.sqrt(board.getTiles().size());
         Set<String> used = new HashSet<>();
-        List<Position> enemyPath = getShortestPathCells(board, getCurrentPosition(board, 3 - playerId),
-                getTargetRow(3 - playerId, size));
-        List<Position> myPath = getShortestPathCells(board, getCurrentPosition(board, playerId),
-                getTargetRow(playerId, size));
+        List<Position> enemyPath = getShortestPathCells(board, getCurrentPosition(board, 3 - playerId), getTargetRow(3 - playerId, size));
+        List<Position> myPath = getShortestPathCells(board, getCurrentPosition(board, playerId), getTargetRow(playerId, size));
         List<Position> candidateCells = new ArrayList<>();
         List<Position> enemyFront = enemyPath.subList(0, Math.min(12, enemyPath.size()));
         List<Position> myFront = myPath.subList(0, Math.min(7, myPath.size()));
@@ -116,10 +113,7 @@ public interface Algorithm {
                 }
             }
         }
-        wallMoves.sort((a, b) -> Integer.compare(
-                wallImpact(board, b, playerId, size),
-                wallImpact(board, a, playerId, size)
-        ));
+        wallMoves.sort((a, b) -> Integer.compare(wallImpact(board, b, playerId, size), wallImpact(board, a, playerId, size)));
         moves.addAll(wallMoves);
         return moves;
     }
@@ -140,8 +134,7 @@ public interface Algorithm {
         }
     }
 
-    default boolean isStrategicWall(Board board, Position start, Position end, int playerId, int size,
-                                    int beforeEnemy, int beforeMine) {
+    default boolean isStrategicWall(Board board, Position start, Position end, int playerId, int size, int beforeEnemy, int beforeMine) {
         Board copy = board.copy();
         copy.placeWall(start, end);
 
@@ -354,8 +347,7 @@ public interface Algorithm {
             return terminal;
         }
 
-        return evaluationFeatures(board, playerId, size, wallsLeft1, wallsLeft2)
-                .score(EvaluationWeightsStore.current());
+        return evaluationFeatures(board, playerId, size, wallsLeft1, wallsLeft2).score(EvaluationWeightsStore.current());
     }
 
     default EvaluationFeatures evaluationFeatures(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {
@@ -381,8 +373,7 @@ public interface Algorithm {
         );
     }
 
-    default EvaluationLearningSample buildLearningSample(Board before, Move move, int playerId,
-                                                         int size, int wallsLeft1, int wallsLeft2) {
+    default EvaluationLearningSample buildLearningSample(Board before, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         if (move == null) {
             return null;
         }

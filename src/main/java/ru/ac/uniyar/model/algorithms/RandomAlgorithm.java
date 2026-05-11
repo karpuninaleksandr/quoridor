@@ -39,39 +39,25 @@ public class RandomAlgorithm implements Algorithm {
 
         Move tacticalMove = findEndgameMove(board, playerId, amountOfWallsLeft);
         if (tacticalMove != null) {
-            lastReport = new AlgorithmReport(getType().getDescription(), tacticalMove,
-                    evaluateAfterMove(board, tacticalMove, playerId, wallsLeft1, wallsLeft2),
-                    0, 1, 1, 0, 0,
-                    System.currentTimeMillis() - startedAt,
-                    "Случайный алгоритм применил эндшпильное правило перед случайным выбором");
+            lastReport = new AlgorithmReport(getType().getDescription(), tacticalMove, evaluateAfterMove(board, tacticalMove, playerId, wallsLeft1, wallsLeft2), 0, 1, 1, 0, 0, System.currentTimeMillis() - startedAt, "Случайный алгоритм применил эндшпильное правило перед случайным выбором");
             return tacticalMove;
         }
 
         Move result;
         switch (hardnessLevel) {
             case MEDIUM -> {
-                moves.sort((a, b) -> Integer.compare(
-                        evaluateAfterMove(board, b, playerId, wallsLeft1, wallsLeft2),
-                        evaluateAfterMove(board, a, playerId, wallsLeft1, wallsLeft2)
-                ));
+                moves.sort((a, b) -> Integer.compare(evaluateAfterMove(board, b, playerId, wallsLeft1, wallsLeft2), evaluateAfterMove(board, a, playerId, wallsLeft1, wallsLeft2)));
                 int half = moves.size() / 2 + 1;
                 result = moves.get(random.nextInt(half));
             }
             case HARD -> {
-                moves.sort((a, b) -> Integer.compare(
-                        evaluateAfterMove(board, b, playerId, wallsLeft1, wallsLeft2),
-                        evaluateAfterMove(board, a, playerId, wallsLeft1, wallsLeft2)
-                ));
+                moves.sort((a, b) -> Integer.compare(evaluateAfterMove(board, b, playerId, wallsLeft1, wallsLeft2), evaluateAfterMove(board, a, playerId, wallsLeft1, wallsLeft2)));
                 int top = Math.min(3, moves.size());
                 result = moves.get(random.nextInt(top));
             }
             default -> result = moves.get(random.nextInt(moves.size()));
         }
-        lastReport = new AlgorithmReport(getType().getDescription(), result,
-                evaluateAfterMove(board, result, playerId, wallsLeft1, wallsLeft2),
-                1, moves.size(), moves.size(), 0, 0,
-                System.currentTimeMillis() - startedAt,
-                describeHardness(hardnessLevel));
+        lastReport = new AlgorithmReport(getType().getDescription(), result, evaluateAfterMove(board, result, playerId, wallsLeft1, wallsLeft2), 1, moves.size(), moves.size(), 0, 0, System.currentTimeMillis() - startedAt, describeHardness(hardnessLevel));
         return result;
     }
 
@@ -96,7 +82,6 @@ public class RandomAlgorithm implements Algorithm {
                 --newWallsLeft2;
             }
         }
-        return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2)
-                + movementPreference(move, board, playerId, size, recentPositions);
+        return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2) + movementPreference(move, board, playerId, size, recentPositions);
     }
 }
