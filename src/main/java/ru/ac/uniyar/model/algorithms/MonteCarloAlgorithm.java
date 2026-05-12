@@ -19,16 +19,19 @@ public class MonteCarloAlgorithm implements Algorithm {
         return ComputerAlgorithmType.MONTECARLO;
     }
 
+    //отдает статистику последнего запуска MCTS
     @Override
     public AlgorithmReport getLastReport() {
         return lastReport;
     }
 
+    //получает последние позиции игрока
     @Override
     public void setRecentPositions(List<Position> recentPositions) {
         this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
+    //строит дерево Монте-Карло и выбирает самый надежный дочерний ход
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
         long startedAt = System.currentTimeMillis();
@@ -66,6 +69,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return best.move;
     }
 
+    //определяет длину одной случайной симуляции
     private int getRolloutDepth(ComputerPlayerHardnessLevel level, int size) {
         return switch (level) {
             case EASY -> size * 4;
@@ -74,6 +78,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         };
     }
 
+    //ограничивает количество симуляций для выбранной сложности
     private long getIterationBudget(ComputerPlayerHardnessLevel level, int size) {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
         return switch (level) {
@@ -83,6 +88,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         };
     }
 
+    //задает временной лимит, после которого MCTS обязан вернуть лучший найденный ход
     @Override
     public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
@@ -93,6 +99,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         };
     }
 
+    //спускается по дереву в наиболее перспективный уже раскрытый узел
     private Node select(Node node) {
         while (!node.children.isEmpty() && node.untriedMoves.isEmpty()) {
             node = node.children.stream().max(Comparator.comparing(this::uct)).orElseThrow();
@@ -100,6 +107,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return node;
     }
 
+    //добавляет в дерево один новый ход из списка еще не проверенных
     private Node expand(Node node) {
         if (node.untriedMoves.isEmpty() && !node.children.isEmpty()) {
             return node;
@@ -136,6 +144,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return child;
     }
 
+    //проигрывает партию вперед упрощенной стратегией и возвращает предполагаемого победителя
     private int simulate(Node node, int maxSteps, int rootPlayer, int size) {
         Board board = node.board.copy();
         int currentPlayer = node.player;
@@ -173,6 +182,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return evaluate(board, rootPlayer, size, wallsLeft1, wallsLeft2) > 0 ? rootPlayer : (3 - rootPlayer);
     }
 
+    //поднимает результат симуляции вверх по дереву и обновляет счетчики посещений
     private void backpropagate(Node node, int winner, int playerId) {
         while (node != null) {
             ++node.visits;
@@ -183,6 +193,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         }
     }
 
+    //формула UCT
     private double uct(Node n) {
         if (n.visits == 0) {
             return Double.MAX_VALUE;
@@ -195,6 +206,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return exploitation + exploration + heuristic;
     }
 
+    //выбирает ход внутри rollout
     private Move pickRolloutMove(Board board, List<Move> moves, int currentPlayer, int rootPlayer, int size, int wallsLeft1, int wallsLeft2) {
         for (Move move : moves) {
             if (move.getMoveType() == MoveType.MOVE_PLAYER
@@ -237,6 +249,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return sampled.get(random.nextInt(top));
     }
 
+    //оценивает ход в симуляции с учетом стороны, за которую сейчас идет rollout
     private int scoreRolloutMove(Board board, Move move, int currentPlayer, int rootPlayer, int size, int wallsLeft1, int wallsLeft2) {
         Board tmp = board.copy();
         applyMove(tmp, move);
@@ -260,6 +273,7 @@ public class MonteCarloAlgorithm implements Algorithm {
         return score;
     }
 
+    //быстро оценивает ход для сортировки при раскрытии узла дерева
     private int scoreMove(Board board, Move move, int playerId, int wallsLeft1, int wallsLeft2) {
         Board copy = board.copy();
         applyMove(copy, move);
@@ -277,11 +291,13 @@ public class MonteCarloAlgorithm implements Algorithm {
         return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2) + preference;
     }
 
+    //нормализует оценку позиции
     private double normalizedEvaluate(Board board, int playerId, int wallsLeft1, int wallsLeft2) {
         int size = (int) Math.sqrt(board.getTiles().size());
         return Math.tanh(evaluate(board, playerId, size, wallsLeft1, wallsLeft2) / 500.0) * 0.15;
     }
 
+    //выбирает дочерний узел не только по победам, но и по устойчивости статистики
     private double robustChildScore(Node node) {
         if (node.visits == 0) {
             return 0;
@@ -289,10 +305,12 @@ public class MonteCarloAlgorithm implements Algorithm {
         return node.visits + node.wins / node.visits;
     }
 
+    //проверяет, насколько уверенно лучший ход уже выигрывает в симуляциях.
     private double bestWinRate(Node root) {
         return root.children.stream().mapToDouble(n -> n.visits == 0 ? 0 : n.wins / n.visits).max().orElse(0);
     }
 
+    //проверяет достижение целевой строки конкретным игроком
     public boolean isWin(Board board, int playerId, int size) {
         int row = getCurrentPosition(board, playerId).row();
         return (playerId == 1 && row == 0) || (playerId == 2 && row == size - 1);

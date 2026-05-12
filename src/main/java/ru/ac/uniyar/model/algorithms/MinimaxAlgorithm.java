@@ -19,16 +19,19 @@ public class MinimaxAlgorithm implements Algorithm {
         return ComputerAlgorithmType.MINIMAX;
     }
 
+    //отдает отчет о последнем ходе
     @Override
     public AlgorithmReport getLastReport() {
         return lastReport;
     }
 
+    //запоминает позиции игрока
     @Override
     public void setRecentPositions(List<Position> recentPositions) {
         this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
+    //ищет лучший ход итеративным углублением минимакса
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel hardnessLevel, int playerId, int wallsLeft1, int wallsLeft2) {
         long startedAt = System.currentTimeMillis();
@@ -67,6 +70,7 @@ public class MinimaxAlgorithm implements Algorithm {
         return best;
     }
 
+    //подбирает максимальную глубину поиска под выбранные сложность и размер поля
     private int getMaxDepth(ComputerPlayerHardnessLevel level, int size) {
         boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
@@ -77,6 +81,7 @@ public class MinimaxAlgorithm implements Algorithm {
         };
     }
 
+    //ограничивает время на ход
     @Override
     public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
@@ -87,6 +92,7 @@ public class MinimaxAlgorithm implements Algorithm {
         };
     }
 
+    //перебирает возможные первые ходы и выбирает ход с лучшей оценкой
     private SearchResult search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
         int currentWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
         List<Move> moves = orderedLimitedMoves(board, getMoves(board, playerId, currentWalls), playerId, size, wallsLeft1, wallsLeft2);
@@ -122,6 +128,7 @@ public class MinimaxAlgorithm implements Algorithm {
         return new SearchResult(bestMove, bestValue);
     }
 
+    //рекурсивно строит дерево игры - свой ход максимизирует оценку, ход соперника минимизирует
     private int minimax(Board board, int depth, boolean maximizing, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
         nodesVisited++;
         if (System.currentTimeMillis() > endTime) {
@@ -175,6 +182,7 @@ public class MinimaxAlgorithm implements Algorithm {
         return best;
     }
 
+    //сортирует ходы по быстрой оценке и оставляет самые перспективные
     private List<Move> orderedLimitedMoves(Board board, List<Move> moves, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         List<Move> ordered = new ArrayList<>(moves);
         ordered.sort((a, b) -> Integer.compare(
@@ -187,10 +195,12 @@ public class MinimaxAlgorithm implements Algorithm {
         return ordered.subList(0, 16);
     }
 
+    //дает ходу предварительный балл для сортировки перед глубоким поиском
     private int scoreMoveForOrdering(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         return scoreMoveAfterApply(board, move, playerId, size, wallsLeft1, wallsLeft2) + movementPreference(move, board, playerId, size, recentPositions);
     }
 
+    //применяет ход на копии доски и оценивает получившуюся позицию
     private int scoreMoveAfterApply(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         Board copy = board.copy();
         applyMove(copy, move);

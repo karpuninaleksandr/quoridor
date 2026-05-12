@@ -22,26 +22,31 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return ComputerAlgorithmType.ALPHABETA;
     }
 
+    //хранит подробности последнего найденного хода.
     @Override
     public AlgorithmReport getLastReport() {
         return lastReport;
     }
 
+    //передает алгоритму историю последних позиций
     @Override
     public void setRecentPositions(List<Position> recentPositions) {
         this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
     }
 
+    //позволяет использовать отдельные веса оценки
     @Override
     public EvaluationWeights getEvaluationWeights() {
         return evaluationWeights == null ? Algorithm.super.getEvaluationWeights() : evaluationWeights;
     }
 
+    //сохраняет веса, которые будут применяться именно этим экземпляром алгоритма
     @Override
     public void setEvaluationWeights(EvaluationWeights evaluationWeights) {
         this.evaluationWeights = evaluationWeights;
     }
 
+    //запускает поиск с постепенным увеличением глубины
     @Override
     public Move getMove(Board board, ComputerPlayerHardnessLevel level, int playerId, int wallsLeft1, int wallsLeft2) {
         long startedAt = System.currentTimeMillis();
@@ -82,6 +87,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return bestMove;
     }
 
+    //задает глубину поиска в зависимости от сложности и размера игрового поля
     private int getMaxDepth(ComputerPlayerHardnessLevel level, int size) {
         boolean smallBoard = size <= GameSize.SMALL.getAmountOfTilesPerSide();
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
@@ -92,6 +98,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         };
     }
 
+    //задает лимит времени на ход
     @Override
     public long getTimeLimit(ComputerPlayerHardnessLevel level, int size) {
         boolean largeBoard = size > GameSize.NORMAL.getAmountOfTilesPerSide();
@@ -103,6 +110,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         };
     }
 
+    //проверяет корневые ходы и выбирает лучший результат среди них
     private SearchResult search(Board board, int depth, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime) {
         int currentWalls = playerId == 1 ? wallsLeft1 : wallsLeft2;
         List<Move> moves = new ArrayList<>(getMoves(board, playerId, currentWalls).stream()
@@ -140,6 +148,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return new SearchResult(bestMove, best);
     }
 
+    //рекурсивный alpha-beta поиск с отсечениями и таблицей транспозиций
     private int alphaBeta(Board board, int depth, int alpha, int beta, boolean max, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime, int ply) {
         nodesVisited++;
         if (System.currentTimeMillis() > endTime) {
@@ -244,6 +253,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return best;
     }
 
+    //досматривает "острые" позиции около победы
     private int quiescence(Board board, int alpha, int beta, boolean max, int playerId, int size, int wallsLeft1, int wallsLeft2, long endTime, int extensionDepth) {
         nodesVisited++;
         int standPat = evaluate(board, playerId, size, wallsLeft1, wallsLeft2);
@@ -306,10 +316,12 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return max ? alpha : beta;
     }
 
+    //ставит в начало списка ходы, которые с большей вероятностью дадут хорошее отсечение
     private void orderMoves(List<Move> moves, Board board, int playerId, int size, int wallsLeft1, int wallsLeft2, int ply, Move tableBestMove) {
         moves.sort((a, b) -> Integer.compare(scoreMove(b, board, playerId, size, wallsLeft1, wallsLeft2, ply, tableBestMove), scoreMove(a, board, playerId, size, wallsLeft1, wallsLeft2, ply, tableBestMove)));
     }
 
+    //считает эвристический балл хода для сортировки перед рекурсивным обходом
     private int scoreMove(Move move, Board board, int playerId, int size, int wallsLeft1, int wallsLeft2, int ply, Move tableBestMove) {
         int score = 0;
 
@@ -333,6 +345,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return score;
     }
 
+    //быстро оценивает позицию, которая получится после выбранного хода
     private int scoreMoveAfterApply(Board board, Move move, int playerId, int size, int wallsLeft1, int wallsLeft2) {
         Board copy = board.copy();
         applyMove(copy, move);
@@ -348,10 +361,12 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return evaluate(copy, playerId, size, newWallsLeft1, newWallsLeft2);
     }
 
+    //добавляет небольшую поправку за движение к цели и против повторения позиций
     private int rootMovePreference(Move move, Board board, int playerId, int size) {
         return movementPreference(move, board, playerId, size, recentPositions);
     }
 
+    //проверяет, что ход из корня дерева действительно можно выполнить в текущей позиции
     private boolean isRootMoveLegal(Board board, Move move, int playerId, int wallsLeft) {
         if (move.getPlayerId() != playerId) {
             return false;
@@ -365,6 +380,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         return isWallPlaceable(board, move.getStartPosition(), move.getEndPosition()) && isValidWall(board, move.getStartPosition(), move.getEndPosition());
     }
 
+    //запоминает ходы, на которых уже происходили отсечения на этой глубине
     private void updateBestMoves(Move move, int ply) {
         if (ply >= bestMoves.length || move.equals(bestMoves[ply][0])) {
             return;
@@ -373,6 +389,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
         bestMoves[ply][0] = move;
     }
 
+    //повышает приоритет хода, если раньше он часто давал полезные отсечения
     private void updateGoodMoves(Move move) {
         goodMoves.merge(move.toString(), 1, Integer::sum);
     }

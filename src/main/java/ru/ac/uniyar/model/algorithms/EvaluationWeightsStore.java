@@ -17,6 +17,7 @@ public final class EvaluationWeightsStore {
 
     private EvaluationWeightsStore() {}
 
+    //возвращает актуальные веса оценки
     public static synchronized EvaluationWeights current() {
         if (current == null) {
             current = load();
@@ -24,6 +25,7 @@ public final class EvaluationWeightsStore {
         return current;
     }
 
+    //обновляет веса по итогам партии
     public static synchronized EvaluationTrainingUpdate learnFromGame(List<EvaluationLearningSample> samples, int winnerId, String source) {
         EvaluationWeights beforeWeights = current();
         if (samples.isEmpty() || winnerId == 0) {
@@ -53,6 +55,7 @@ public final class EvaluationWeightsStore {
         return new EvaluationTrainingUpdate(true, winnerId, samples.size(), gradient, beforeWeights, current);
     }
 
+    //загружает веса из properties-файла
     private static EvaluationWeights load() {
         if (!Files.exists(FILE)) {
             EvaluationWeights defaults = EvaluationWeights.defaults();
@@ -80,15 +83,15 @@ public final class EvaluationWeightsStore {
         }
     }
 
+    //сохраняет текущий набор весов
     private static void save(EvaluationWeights weights) {
         try {
             Files.createDirectories(FILE.getParent());
             Files.writeString(FILE, serialize(weights), StandardCharsets.UTF_8);
-        } catch (IOException ignored) {
-            // Если файл недоступен, алгоритмы продолжают работать с весами в памяти.
-        }
+        } catch (IOException ignored) {}
     }
 
+    //преобразует веса в простой properties-формат
     private static String serialize(EvaluationWeights weights) {
         return """
                 pathAdvantage=%d
@@ -111,6 +114,7 @@ public final class EvaluationWeightsStore {
         );
     }
 
+    //дописывает строку в CSV-историю
     private static void appendHistory(String source, int winnerId, int sampleCount, int[] gradient, EvaluationWeights before, EvaluationWeights after) {
         try {
             Files.createDirectories(HISTORY_FILE.getParent());
@@ -119,11 +123,10 @@ public final class EvaluationWeightsStore {
             }
             Files.writeString(HISTORY_FILE, historyRow(source, winnerId, sampleCount, gradient, before, after),
                     StandardCharsets.UTF_8, StandardOpenOption.APPEND);
-        } catch (IOException ignored) {
-            // История полезна для диплома, но недоступность файла не должна ломать обучение.
-        }
+        } catch (IOException ignored) {}
     }
 
+    //формирует заголовок CSV-файла с историей изменения весов
     private static String historyHeader() {
         return "timestamp,source,winnerId,sampleCount,"
                 + "gradientPath,gradientMyMobility,gradientEnemyMobility,gradientWall,gradientProgress,gradientMyEndgame,gradientEnemyEndgame,"
@@ -131,6 +134,7 @@ public final class EvaluationWeightsStore {
                 + "afterPath,afterMyMobility,afterEnemyMobility,afterWall,afterProgress,afterMyEndgame,afterEnemyEndgame,afterSamples\n";
     }
 
+    //собирает одну строку истории
     private static String historyRow(String source, int winnerId, int sampleCount, int[] gradient, EvaluationWeights before, EvaluationWeights after) {
         return String.join(",",
                 LocalDateTime.now().toString(),
@@ -163,6 +167,7 @@ public final class EvaluationWeightsStore {
         ) + "\n";
     }
 
+    //экранирует текстовое поле для корректной записи в CSV
     private static String escape(String value) {
         String safe = value == null ? "" : value.replace("\"", "\"\"");
         return "\"" + safe + "\"";
@@ -176,6 +181,7 @@ public final class EvaluationWeightsStore {
         return Long.parseLong(properties.getProperty(key, Long.toString(fallback)));
     }
 
+    //проверяет, есть ли в градиенте хоть одно ненулевое изменение.
     private static boolean isZero(int[] values) {
         for (int value : values) {
             if (value != 0) {
