@@ -22,6 +22,12 @@ public interface Algorithm {
 
     default void setRecentPositions(List<Position> recentPositions) {}
 
+    default EvaluationWeights getEvaluationWeights() {
+        return EvaluationWeightsStore.current();
+    }
+
+    default void setEvaluationWeights(EvaluationWeights weights) {}
+
     default int movementPreference(Move move, Board board, int playerId, int size, List<Position> recentPositions) {
         if (move.getMoveType() != MoveType.MOVE_PLAYER || move.getPlayerId() != playerId) {
             return 0;
@@ -347,7 +353,7 @@ public interface Algorithm {
             return terminal;
         }
 
-        return evaluationFeatures(board, playerId, size, wallsLeft1, wallsLeft2).score(EvaluationWeightsStore.current());
+        return evaluationFeatures(board, playerId, size, wallsLeft1, wallsLeft2).score(getEvaluationWeights());
     }
 
     default EvaluationFeatures evaluationFeatures(Board board, int playerId, int size, int wallsLeft1, int wallsLeft2) {

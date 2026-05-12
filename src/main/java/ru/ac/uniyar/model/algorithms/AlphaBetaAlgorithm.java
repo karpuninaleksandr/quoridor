@@ -15,6 +15,7 @@ public class AlphaBetaAlgorithm implements Algorithm {
     private long cutoffs;
     private long tableHits;
     private List<Position> recentPositions = List.of();
+    private EvaluationWeights evaluationWeights;
 
     @Override
     public ComputerAlgorithmType getType() {
@@ -29,6 +30,16 @@ public class AlphaBetaAlgorithm implements Algorithm {
     @Override
     public void setRecentPositions(List<Position> recentPositions) {
         this.recentPositions = recentPositions == null ? List.of() : List.copyOf(recentPositions);
+    }
+
+    @Override
+    public EvaluationWeights getEvaluationWeights() {
+        return evaluationWeights == null ? Algorithm.super.getEvaluationWeights() : evaluationWeights;
+    }
+
+    @Override
+    public void setEvaluationWeights(EvaluationWeights evaluationWeights) {
+        this.evaluationWeights = evaluationWeights;
     }
 
     @Override

@@ -94,8 +94,36 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
             }, "quoridor-comparison").start();
         });
 
+        Button compareWeights = new Button("Сравнить веса AlphaBeta");
+        compareWeights.addClickListener(event -> {
+            if (games.getValue() == null) {
+                result.setText("Укажи количество партий");
+                return;
+            }
+
+            UI ui = UI.getCurrent();
+            int selectedGames = games.getValue();
+            ui.setPollInterval(500);
+            run.setEnabled(false);
+            compareWeights.setEnabled(false);
+            result.setText("");
+
+            new Thread(() -> {
+                tournamentService.compareAlphaBetaWeights(
+                        selectedGames,
+                        line -> ui.access(() -> result.setText(result.getText() + line + "\n"))
+                );
+                ui.access(() -> {
+                    run.setEnabled(true);
+                    compareWeights.setEnabled(true);
+                    ui.setPollInterval(-1);
+                });
+            }, "quoridor-weights-comparison").start();
+        });
+
         Button back = new Button("Назад", e -> getUI().ifPresent(ui -> ui.navigate("start")));
         addTooltip(run, "Запустить матчи всех разных пар алгоритмов без зеркальных повторов.");
+        addTooltip(compareWeights, "Запустить AlphaBeta HARD на поле 11 на 11: начальные веса против обновленных.");
         addTooltip(back, "Вернуться к стартовому меню.");
 
         HorizontalLayout controls = new HorizontalLayout(
@@ -108,7 +136,7 @@ public class AlgorithmComparisonPageController extends VerticalLayout {
         );
         controls.addClassName("comparison-page__controls");
 
-        add(title, controls, new HorizontalLayout(run, back), result);
+        add(title, controls, new HorizontalLayout(run, compareWeights, back), result);
     }
 
     private String buildTable(List<AlgorithmComparisonResult> rows) {

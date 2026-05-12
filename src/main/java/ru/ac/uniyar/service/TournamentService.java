@@ -2,8 +2,12 @@ package ru.ac.uniyar.service;
 
 import org.springframework.stereotype.Service;
 import ru.ac.uniyar.model.*;
+import ru.ac.uniyar.model.algorithms.AlphaBetaAlgorithm;
 import ru.ac.uniyar.model.algorithms.AlgorithmReport;
+import ru.ac.uniyar.model.algorithms.EvaluationWeights;
+import ru.ac.uniyar.model.algorithms.EvaluationWeightsStore;
 import ru.ac.uniyar.model.enums.ComputerAlgorithmType;
+import ru.ac.uniyar.model.enums.ComputerPlayerHardnessLevel;
 import ru.ac.uniyar.model.enums.GameSize;
 import ru.ac.uniyar.model.enums.MoveType;
 import ru.ac.uniyar.model.players.ComputerPlayer;
@@ -108,6 +112,80 @@ public class TournamentService {
         return results;
     }
 
+    public WeightsComparisonResult compareAlphaBetaWeights(int games, Consumer<String> logger) {
+        int defaultWins = 0;
+        int trainedWins = 0;
+        int draws = 0;
+        int totalMoves = 0;
+        int moveLimit = 300;
+        GameSize gameSize = GameSize.LARGE;
+        ComparisonMetrics metrics = new ComparisonMetrics();
+
+        logger.accept("Старт сравнения весов AlphaBeta");
+        logger.accept("Поле: " + gameSize.getDescription()
+                + ", сложность: " + ComputerPlayerHardnessLevel.HARD.getDescription()
+                + ", партий: " + games);
+        logger.accept("P1/P2 чередуются: начальные веса против обновленных весов");
+
+        for (int i = 0; i < games; ++i) {
+            int gameNumber = i + 1;
+            int gamesLeftAfterCurrent = games - gameNumber;
+            boolean defaultAsFirst = i % 2 == 0;
+            logger.accept("Партия " + gameNumber + "/" + games
+                    + ": " + (defaultAsFirst ? "P1=начальные веса, P2=обновленные" : "P1=обновленные веса, P2=начальные")
+                    + ", после нее останется партий: " + gamesLeftAfterCurrent);
+
+            Game game = createAlphaBetaWeightsGame(gameSize, defaultAsFirst);
+            int winner = play(game, moveLimit, logger, gameNumber, games, gamesLeftAfterCurrent, metrics);
+            totalMoves += game.getAmountOfMoves();
+
+            boolean defaultWon = (winner == 1 && defaultAsFirst) || (winner == 2 && !defaultAsFirst);
+            boolean trainedWon = (winner == 2 && defaultAsFirst) || (winner == 1 && !defaultAsFirst);
+            if (defaultWon) {
+                defaultWins++;
+                logger.accept("  Победила AlphaBeta с начальными весами за " + game.getAmountOfMoves() + " ходов");
+            } else if (trainedWon) {
+                trainedWins++;
+                logger.accept("  Победила AlphaBeta с обновленными весами за " + game.getAmountOfMoves() + " ходов");
+            } else {
+                draws++;
+                logger.accept("  Ничья/лимит после " + game.getAmountOfMoves() + " ходов");
+            }
+            logger.accept("  Текущий счет: начальные=" + defaultWins
+                    + ", обновленные=" + trainedWins
+                    + ", ничьи=" + draws);
+            logger.accept("  Прогресс: завершено " + gameNumber + "/" + games
+                    + ", осталось партий: " + gamesLeftAfterCurrent);
+        }
+
+        WeightsComparisonResult result = new WeightsComparisonResult(
+                games,
+                defaultWins,
+                trainedWins,
+                draws,
+                games == 0 ? 0 : totalMoves * 1.0 / games,
+                metrics.averageTimeMs(),
+                metrics.averageDepth(),
+                metrics.averageNodes(),
+                metrics.averageCutoffs()
+        );
+        logger.accept("Итог сравнения весов:\n" + weightsComparisonSummary(result));
+        return result;
+    }
+
+    public String weightsComparisonSummary(WeightsComparisonResult result) {
+        return "AlphaBeta: начальные веса vs обновленные веса"
+                + "\nПартий: " + result.games()
+                + "\nПобеды начальных весов: " + result.defaultWins()
+                + "\nПобеды обновленных весов: " + result.trainedWins()
+                + "\nНичьи/лимит ходов: " + result.draws()
+                + "\nСредняя длина партии: " + String.format("%.2f", result.averageMoves())
+                + "\nСреднее время хода: " + String.format("%.1f мс", result.averageTimeMs())
+                + "\nСредняя глубина: " + String.format("%.2f", result.averageDepth())
+                + "\nСреднее число узлов: " + String.format("%.1f", result.averageNodes())
+                + "\nСреднее число отсечений: " + String.format("%.1f", result.averageCutoffs());
+    }
+
     private AlgorithmComparisonResult runComparisonPair(String algorithm1, String algorithm2,
                                                         String hardness1, String hardness2,
                                                         GameSize gameSize, int games,
@@ -177,6 +255,30 @@ public class TournamentService {
         player2.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
 
         return new Game(gameSize, boardFactory.create(gameSize), player1, player2, firstPlayer, Instant.now(), 0, false);
+    }
+
+    private Game createAlphaBetaWeightsGame(GameSize gameSize, boolean defaultAsFirst) {
+        ComputerPlayer defaultPlayer = createAlphaBetaPlayer(EvaluationWeights.defaults());
+        ComputerPlayer trainedPlayer = createAlphaBetaPlayer(EvaluationWeightsStore.current());
+
+        Player player1 = defaultAsFirst ? defaultPlayer : trainedPlayer;
+        player1.setPlayerId(1);
+        player1.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
+
+        Player player2 = defaultAsFirst ? trainedPlayer : defaultPlayer;
+        player2.setPlayerId(2);
+        player2.setAmountOfWallsLeft(gameSize.getAmountOfWalls());
+
+        return new Game(gameSize, boardFactory.create(gameSize), player1, player2, 1, Instant.now(), 0, false);
+    }
+
+    private ComputerPlayer createAlphaBetaPlayer(EvaluationWeights weights) {
+        AlphaBetaAlgorithm algorithm = new AlphaBetaAlgorithm();
+        algorithm.setEvaluationWeights(weights);
+        ComputerPlayer player = new ComputerPlayer();
+        player.setAlgorithm(algorithm);
+        player.setHardnessLevel(ComputerPlayerHardnessLevel.HARD);
+        return player;
     }
 
     private int play(Game game, int moveLimit, Consumer<String> logger, int gameNumber, int totalGames,
