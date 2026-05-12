@@ -60,7 +60,7 @@
 
 \chapter*{Реферат}
 
-Объем \total{page} с., \total{chapternum} гл., 7 рис.,
+Объем \total{page} с., \total{chapternum} гл., 12 рис.,
 8 табл., \total{bibnum} источников, \total{appnum} прил.
 
 \medskip
@@ -247,7 +247,34 @@
     \item собственный путь удлиняется меньше, чем путь соперника
 \end{enumerate}
 
-Итоговый список возможных стен сортируется по убыванию значения функции \texttt{wallImpact}.
+Итоговый список возможных стен сортируется по убыванию значения функции \texttt{wallImpact}. Схема формирования множества допустимых ходов приведена на рис.~\ref{fig:move_generation}.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[
+        node distance=0.8cm and 0.7cm,
+        box/.style={rectangle, rounded corners, draw=black!55, fill=gray!8, align=center, text width=3.6cm, minimum height=0.9cm, font=\small},
+        smallbox/.style={rectangle, rounded corners, draw=black!55, fill=blue!6, align=center, text width=3.0cm, minimum height=0.85cm, font=\small},
+        wallbox/.style={rectangle, rounded corners, draw=black!55, fill=brown!10, align=center, text width=3.0cm, minimum height=0.85cm, font=\small},
+        arr/.style={-{Latex[length=2.2mm]}, thick}
+    ]
+        \node[box] (state) {Текущее \\ состояние доски};
+        \node[smallbox, below left=of state] (pawn) {Ходы фишкой\\};
+        \node[wallbox, below right=of state] (walls) {Кандидатные стены\\ около кратчайшего пути};
+        \node[wallbox, below=of walls] (check) {Проверка коллизий\\ и достижимости целей};
+        \node[box, below=1.25cm of state] (merge) {Общее множество допустимых ходов};
+        \node[box, below=of merge] (sort) {Сортировка ходов};
+
+        \draw[arr] (state) -- (pawn);
+        \draw[arr] (state) -- (walls);
+        \draw[arr] (walls) -- (check);
+        \draw[arr] (pawn) -- (merge);
+        \draw[arr] (check) -- (merge);
+        \draw[arr] (merge) -- (sort);
+    \end{tikzpicture}
+    \caption{Формирование множества допустимых ходов}
+    \label{fig:move_generation}
+\end{figure}
 
 \subsection*{Функция wallImpact}
 
@@ -264,7 +291,34 @@
 
 Метод \texttt{calculateShortestPath(board, start, targetRow)} основан на обходе графа в ширину от текущей позиции фишки на игровом поле до ближайшей клетки целевой строки.
 
-Метод \texttt{getShortestPathCells} дополняет предыдущий восстановлением кратчайшего пути, поскольку при поиске такового хранит в истории посещенные клетки. Как уже описывалось ранее, он используется для поиска <<кандидатных>> клеток для установки стен.
+Метод \texttt{getShortestPathCells} дополняет предыдущий восстановлением кратчайшего пути, поскольку при поиске такового хранит в истории посещенные клетки. Как уже описывалось ранее, он используется для поиска <<кандидатных>> клеток для установки стен. Принцип работы поиска кратчайшего пути на графе поля показан на рис.~\ref{fig:bfs_path}.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[scale=0.78, cell/.style={draw=black!45, minimum size=0.72cm}]
+        \foreach \i in {0,...,4} {
+            \foreach \j in {0,...,4} {
+                \node[cell] at (\j,-\i) {};
+            }
+        }
+        \foreach \x/\y in {2/-4,2/-3,1/-3,1/-2,1/-1,2/-1,2/0} {
+            \fill[green!28] (\x,\y) circle (0.2);
+        }
+        \draw[very thick, green!55!black, -{Latex[length=2mm]}] (2,-4) -- (2,-3.25);
+        \draw[very thick, green!55!black, -{Latex[length=2mm]}] (2,-3) -- (1.25,-3);
+        \draw[very thick, green!55!black, -{Latex[length=2mm]}] (1,-3) -- (1,-2.25);
+        \draw[very thick, green!55!black, -{Latex[length=2mm]}] (1,-2) -- (1,-1.25);
+        \draw[very thick, green!55!black, -{Latex[length=2mm]}] (1,-1) -- (1.75,-1);
+        \draw[very thick, green!55!black, -{Latex[length=2mm]}] (2,-1) -- (2,-0.25);
+        \draw[line width=4pt, brown!80!black] (1.5,-2.5) -- (3.5,-2.5);
+        \draw[line width=4pt, brown!80!black] (2.5,-0.5) -- (2.5,-2.5);
+        \fill[blue!75] (2,-4) circle (0.24);
+        \node[above=0.16cm] at (2,0.38) {целевая строка};
+        \node[right=0.45cm, align=left, font=\small] at (4.4,-1.4) {};
+    \end{tikzpicture}
+    \caption{Поиск кратчайшего пути с учётом установленных стен}
+    \label{fig:bfs_path}
+\end{figure}
 
 \subsection*{Эндшпильные правила}
 
@@ -291,7 +345,39 @@
 \begin{equation}
     F(s) = \sum_{k=1}^{7} \lambda_k \cdot f_k(s),
 \end{equation}
-где $\lambda_k$ "--- веса, а $f_k(s)$ "--- значения параметров. Параметры и их описание перечислены в таблице~\ref{tab:features}.
+где $\lambda_k$ "--- веса, а $f_k(s)$ "--- значения параметров. Общая идея вычисления оценки показана на рис.~\ref{fig:evaluation_scheme}. Параметры и их описание перечислены в таблице~\ref{tab:features}.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[
+        node distance=0.55cm,
+        box/.style={
+            rectangle,
+            rounded corners,
+            draw=black!55,
+            fill=gray!8,
+            align=center,
+            text width=8.6cm,
+            minimum height=0.82cm,
+            font=\small
+        },
+        arr/.style={-{Latex[length=2.2mm]}, thick}
+    ]
+        \node[box] (state) {Позиция $s$};
+        \node[box, below=of state] (features) {Расчёт признаков $f_k(s)$:\\
+            разность путей, мобильность, стены, прогресс, эндшпиль};
+        \node[box, below=of features] (weights) {Применение весов $\lambda_k$};
+        \node[box, below=of weights] (sum) {Взвешенная сумма $\sum\limits_{k=1}^{7} \lambda_k f_k(s)$};
+        \node[box, below=of sum] (score) {Итоговая оценка позиции $F(s)$};
+
+        \draw[arr] (state) -- (features);
+        \draw[arr] (features) -- (weights);
+        \draw[arr] (weights) -- (sum);
+        \draw[arr] (sum) -- (score);
+    \end{tikzpicture}
+    \caption{Вычисление оценки игровой позиции}
+    \label{fig:evaluation_scheme}
+\end{figure}
 
 \begin{table}[h]
     \centering
@@ -921,6 +1007,7 @@ AlphaBeta & 50 & -- & -- \\
 
 \lstset{
     language=Java,
+    inputencoding=utf8,
     breaklines=true,
     tabsize=4,
     formfeed=\newpage,
