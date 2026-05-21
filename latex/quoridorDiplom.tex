@@ -411,40 +411,42 @@ e(d) = \begin{cases}
 \lambda_1 = 65,\quad \lambda_2 = 4,\quad \lambda_3 = 3,\quad \lambda_4 = 18,\quad \lambda_5 = 6,\quad \lambda_6 = 165,\quad \lambda_7 = 175.
 \]
 
-Пример использования функции оценки удобно рассмотреть на конкретной позиции. На рис.~\ref{fig:evaluation_example_board} показаны два варианта продолжения для синей фишки алгоритма: ход вперёд и установка стены перед соперником. После применения каждого из этих вариантов для получившейся позиции вычисляется вектор признаков, а затем итоговая оценка по формуле $F(s)$.
+Пример использования функции оценки удобно рассмотреть на конкретной позиции. На рис.~\ref{fig:evaluation_example_board} показаны два варианта продолжения для синей фишки алгоритма: обычный ход фишкой вперёд и установка стены в узком проходе перед соперником. Красная фишка игрока находится в коридоре: слева и справа от неё уже стоят перегородки. Поэтому новая стена во втором варианте перекрывает движение вперёд и вынуждает игрока сначала отойти назад, а затем искать обходной путь. После применения каждого из этих вариантов для получившейся позиции вычисляется вектор признаков, а затем итоговая оценка по формуле $F(s)$.
 
 \begin{figure}[h]
     \centering
     \begin{tikzpicture}[scale=0.62, cell/.style={draw=black!45, minimum size=0.48cm}]
         \begin{scope}
-            \node[font=\small] at (3,0.65) {};
+            \node[font=\small] at (3,0.65) {ход фишкой};
             \foreach \x in {0,...,6} {
                 \foreach \y in {0,...,6} {
                     \node[cell] at (\x,-\y) {};
                 }
             }
-            \draw[line width=3pt, brown!80!black] (1.5,-2.5) -- (3.5,-2.5);
-            \draw[line width=3pt, brown!80!black] (4.5,-3.5) -- (4.5,-5.5);
-            \fill[blue!75] (3,-5) circle (0.2);
+            \draw[line width=3pt, brown!80!black] (2.5,-0.5) -- (2.5,-2.5);
+            \draw[line width=3pt, brown!80!black] (3.5,-0.5) -- (3.5,-2.5);
+            \draw[dashed, red!70!black, thick, -{Latex[length=2mm]}] (3,-2.25) -- (3,-6.35);
+            \fill[blue!75] (1,-5) circle (0.2);
             \fill[red!75] (3,-2) circle (0.2);
-            \draw[very thick, green!55!black, -{Latex[length=2mm]}] (3,-5) -- (3,-4.25);
-            \fill[green!40] (3,-4) circle (0.16);
-            \node[font=\scriptsize] at (3,-5) {\textcolor{white}{A}};
+            \draw[very thick, green!55!black, -{Latex[length=2mm]}] (1,-5) -- (1,-4.25);
+            \fill[green!40] (1,-4) circle (0.16);
+            \node[font=\scriptsize] at (1,-5) {\textcolor{white}{A}};
             \node[font=\scriptsize] at (3,-2) {\textcolor{white}{P}};
         \end{scope}
         \begin{scope}[xshift=8.3cm]
-            \node[font=\small] at (3,0.65) {};
+            \node[font=\small] at (3,0.65) {стена в проходе};
             \foreach \x in {0,...,6} {
                 \foreach \y in {0,...,6} {
                     \node[cell] at (\x,-\y) {};
                 }
             }
-            \draw[line width=3pt, brown!80!black] (1.5,-2.5) -- (3.5,-2.5);
-            \draw[line width=3pt, brown!80!black] (4.5,-3.5) -- (4.5,-5.5);
-            \draw[line width=4pt, green!55!black] (2.5,-1.5) -- (4.5,-1.5);
-            \fill[blue!75] (3,-5) circle (0.2);
+            \draw[line width=3pt, brown!80!black] (2.5,-0.5) -- (2.5,-2.5);
+            \draw[line width=3pt, brown!80!black] (3.5,-0.5) -- (3.5,-2.5);
+            \draw[line width=4pt, green!55!black] (2.5,-2.5) -- (4.5,-2.5);
+            \draw[dashed, red!70!black, thick, -{Latex[length=2mm]}] (3,-1.75) -- (3,-0.35) -- (2,-0.35) -- (2,-6.35);
+            \fill[blue!75] (1,-5) circle (0.2);
             \fill[red!75] (3,-2) circle (0.2);
-            \node[font=\scriptsize] at (3,-5) {\textcolor{white}{A}};
+            \node[font=\scriptsize] at (1,-5) {\textcolor{white}{A}};
             \node[font=\scriptsize] at (3,-2) {\textcolor{white}{P}};
         \end{scope}
     \end{tikzpicture}
@@ -452,19 +454,19 @@ e(d) = \begin{cases}
     \label{fig:evaluation_example_board}
 \end{figure}
 
-Числовое сравнение этих вариантов приведено в таблице~\ref{tab:evaluation_example}. Второй ход получает большую оценку, потому что сильнее увеличивает преимущество по кратчайшему пути, несмотря на меньшую мобильность и расход одной стены.
+Числовое сравнение этих вариантов приведено в таблице~\ref{tab:evaluation_example}. Второй ход получает большую оценку, потому что сильнее увеличивает разницу между кратчайшими путями игроков, несмотря на расход одной стены.
 
 \begin{table}[h]
 \centering
 \caption{Пример сравнения двух ходов с помощью функции оценки}
 \label{tab:evaluation_example}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrrrr}
+\begin{tabular}{lrrrrrrrrrr}
 \toprule
-Вариант & $d_p-d_a$ & $\mathrm{mob}_a$ & $-\mathrm{mob}_p$ & $w_a-w_p$ & $\mathrm{prog}_a-\mathrm{prog}_p$ & $e(d_a)$ & $-e(d_p)$ & $F(s)$ \\
+Вариант & $d_a$ & $d_p$ & $d_p-d_a$ & $\mathrm{mob}_a$ & $-\mathrm{mob}_p$ & $w_a-w_p$ & $\mathrm{prog}_a-\mathrm{prog}_p$ & $e(d_a)$ & $-e(d_p)$ & $F(s)$ \\
 \midrule
-Ход фишкой вперёд & 2 & 4 & -3 & 0  & 1 & 0 & 0 & 143 \\
-Установка стены   & 4 & 4 & -2 & -1 & 0 & 0 & 0 & 252 \\
+Ход фишкой вперёд & 4 & 4 & 0 & 4 & -2 & 0  & 1 & 0 & 0 & 16 \\
+Установка стены   & 5 & 9 & 4 & 4 & -1 & -1 & 0 & 0 & 0 & 255 \\
 \bottomrule
 \end{tabular}%
 }
@@ -472,11 +474,11 @@ e(d) = \begin{cases}
 
 Для первого варианта итоговая оценка равна
 \[
-2 \cdot 65 + 4 \cdot 4 - 3 \cdot 3 + 0 \cdot 18 + 1 \cdot 6 = 143.
+0 \cdot 65 + 4 \cdot 4 - 2 \cdot 3 + 0 \cdot 18 + 1 \cdot 6 = 16.
 \]
 Для второго варианта:
 \[
-4 \cdot 65 + 4 \cdot 4 - 2 \cdot 3 - 1 \cdot 18 = 252.
+4 \cdot 65 + 4 \cdot 4 - 1 \cdot 3 - 1 \cdot 18 = 255.
 \]
 
 \subsection*{Коррекция весов}
@@ -555,53 +557,53 @@ $M \leftarrow$ \texttt{getMoves}$(s)$\;
 
 Максимальная глубина $d_{\max}$ и лимит времени $T$ зависят от выбранных пользователем уровня сложности алгоритма и размера игрового поля.
 
-Пример выбора хода Минимаксом показан на рис.~\ref{fig:minimax_tree}. Он построен на той же позиции, что и пример функции оценки на рис.~\ref{fig:evaluation_example_board}: алгоритм сравнивает ход фишкой вперёд и установку стены. Таблица~\ref{tab:evaluation_example} показывает статическую оценку сразу после хода алгоритма, а дерево демонстрирует более глубокий фрагмент поиска: ход алгоритма, ответ соперника, следующий ход алгоритма и оценка листовой позиции. Значения поднимаются снизу вверх: на уровне алгоритма берётся максимум, на уровне соперника "--- минимум.
+Пример выбора хода Минимаксом показан на рис.~\ref{fig:minimax_tree}. Он построен на той же позиции, что и пример функции оценки на рис.~\ref{fig:evaluation_example_board}.
 
-\begin{figure}[p]
+\begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{%
     \begin{tikzpicture}[
         treeNode/.style={rectangle, rounded corners, draw=black!55, fill=gray!8, align=center, text width=1.55cm, minimum height=0.62cm, font=\scriptsize},
         bestNode/.style={treeNode, fill=gray!22},
-        leafNode/.style={rectangle, rounded corners, draw=black!50, fill=white, align=center, text width=0.72cm, minimum height=0.42cm, inner sep=1pt, font=\scriptsize},
+        leafNode/.style={rectangle, rounded corners, draw=black!50, fill=white, align=center, text width=0.72cm, minimum height=0.56cm, inner sep=0.5pt, font=\tiny},
         bestLeaf/.style={leafNode, fill=gray!22},
         arr/.style={-{Latex[length=1.6mm]}, thick}
     ]
-        \node[bestNode] (root) at (0,0) {MAX\\позиция\\$\max(124,161)=161$};
+        \node[bestNode] (root) at (0,0) {MAX: $202$};
 
-        \node[treeNode] (m1) at (-4.0,-1.25) {A: ход\\вперёд\\MIN: $124$};
-        \node[bestNode] (m2) at (4.0,-1.25) {A: стена\\MIN: $161$};
+        \node[treeNode] (m1) at (-4.0,-1.25) {A: ход\\вперёд\\MIN: $-596$};
+        \node[bestNode] (m2) at (4.0,-1.25) {A: закрыть\\проход\\MIN: $202$};
 
-        \node[treeNode] (p11) at (-6.0,-2.50) {P: вперёд\\MAX: $124$};
-        \node[treeNode] (p12) at (-2.0,-2.50) {P: стена\\MAX: $146$};
-        \node[bestNode] (p21) at (2.0,-2.50) {P: контр-\\стена\\MAX: $161$};
-        \node[treeNode] (p22) at (6.0,-2.50) {P: обход\\MAX: $178$};
+        \node[bestNode] (p11) at (-6.0,-2.50) {P: вперёд\\MAX: $-596$};
+        \node[treeNode] (p12) at (-2.0,-2.50) {P: назад\\MAX: $252$};
+        \node[bestNode] (p21) at (2.0,-2.50) {P: назад\\MAX: $202$};
+        \node[treeNode] (p22) at (6.0,-2.50) {P: стена\\MAX: $220$};
 
-        \node[bestNode] (a111) at (-7.0,-3.75) {A: вперёд\\MIN: $124$};
-        \node[treeNode] (a112) at (-5.0,-3.75) {A: стена\\MIN: $118$};
-        \node[treeNode] (a121) at (-3.0,-3.75) {A: обход\\MIN: $146$};
-        \node[treeNode] (a122) at (-1.0,-3.75) {A: стена\\MIN: $139$};
-        \node[bestNode] (a211) at (1.0,-3.75) {A: вперёд\\MIN: $161$};
-        \node[treeNode] (a212) at (3.0,-3.75) {A: стена\\MIN: $154$};
-        \node[treeNode] (a221) at (5.0,-3.75) {A: обход\\MIN: $178$};
-        \node[treeNode] (a222) at (7.0,-3.75) {A: стена\\MIN: $169$};
+        \node[bestNode] (a111) at (-7.0,-3.75) {A: вперёд\\MIN: $-596$};
+        \node[treeNode] (a112) at (-5.0,-3.75) {A: вправо\\MIN: $-832$};
+        \node[treeNode] (a121) at (-3.0,-3.75) {A: вперёд\\MIN: $252$};
+        \node[treeNode] (a122) at (-1.0,-3.75) {A: вправо\\MIN: $16$};
+        \node[bestNode] (a211) at (1.0,-3.75) {A: вперёд\\MIN: $202$};
+        \node[treeNode] (a212) at (3.0,-3.75) {A: вправо\\MIN: $66$};
+        \node[treeNode] (a221) at (5.0,-3.75) {A: вперёд\\MIN: $220$};
+        \node[treeNode] (a222) at (7.0,-3.75) {A: вправо\\MIN: $84$};
 
-        \node[bestLeaf] (l111a) at (-7.5,-5.00) {$124$};
-        \node[leafNode] (l111b) at (-6.5,-5.00) {$130$};
-        \node[leafNode] (l112a) at (-5.5,-5.00) {$118$};
-        \node[leafNode] (l112b) at (-4.5,-5.00) {$126$};
-        \node[leafNode] (l121a) at (-3.5,-5.00) {$146$};
-        \node[leafNode] (l121b) at (-2.5,-5.00) {$153$};
-        \node[leafNode] (l122a) at (-1.5,-5.00) {$139$};
-        \node[leafNode] (l122b) at (-0.5,-5.00) {$141$};
-        \node[bestLeaf] (l211a) at (0.5,-5.00) {$161$};
-        \node[leafNode] (l211b) at (1.5,-5.00) {$170$};
-        \node[leafNode] (l212a) at (2.5,-5.00) {$154$};
-        \node[leafNode] (l212b) at (3.5,-5.00) {$162$};
-        \node[leafNode] (l221a) at (4.5,-5.00) {$178$};
-        \node[leafNode] (l221b) at (5.5,-5.00) {$181$};
-        \node[leafNode] (l222a) at (6.5,-5.00) {$169$};
-        \node[leafNode] (l222b) at (7.5,-5.00) {$173$};
+        \node[bestLeaf] (l111a) at (-7.45,-5.00) {цель\\$-596$};
+        \node[leafNode] (l111b) at (-6.55,-5.00) {назад\\$252$};
+        \node[leafNode] (l112a) at (-5.45,-5.00) {цель\\$-832$};
+        \node[leafNode] (l112b) at (-4.55,-5.00) {назад\\$16$};
+        \node[leafNode] (l121a) at (-3.45,-5.00) {цель\\$252$};
+        \node[leafNode] (l121b) at (-2.55,-5.00) {назад\\$391$};
+        \node[leafNode] (l122a) at (-1.45,-5.00) {цель\\$16$};
+        \node[leafNode] (l122b) at (-0.55,-5.00) {назад\\$155$};
+        \node[bestLeaf] (l211a) at (0.55,-5.00) {обход\\$202$};
+        \node[leafNode] (l211b) at (1.45,-5.00) {назад\\$326$};
+        \node[leafNode] (l212a) at (2.55,-5.00) {обход\\$66$};
+        \node[leafNode] (l212b) at (3.45,-5.00) {назад\\$190$};
+        \node[leafNode] (l221a) at (4.55,-5.00) {обход\\$220$};
+        \node[leafNode] (l221b) at (5.45,-5.00) {назад\\$344$};
+        \node[leafNode] (l222a) at (6.55,-5.00) {обход\\$84$};
+        \node[leafNode] (l222b) at (7.45,-5.00) {назад\\$208$};
 
         \draw[arr] (root) -- (m1);
         \draw[arr] (root) -- (m2);
@@ -633,15 +635,13 @@ $M \leftarrow$ \texttt{getMoves}$(s)$\;
         \draw[arr] (a221) -- (l221b);
         \draw[arr] (a222) -- (l222a);
         \draw[arr] (a222) -- (l222b);
-
-        \node[font=\small, align=center, text width=13.0cm] at (0,-6.10) {при просмотре на четыре полухода ход фишкой может быть снижен соперником до $124$, а установка стены сохраняет гарантированную оценку $161$};
     \end{tikzpicture}%
     }
-    \caption{Фрагмент дерева Минимакса для позиции из примера функции оценки}
+    \caption{Фрагмент дерева Минимакса}
     \label{fig:minimax_tree}
 \end{figure}
 
-\begin{table}[h]
+\begin{table}[H]
     \centering
     \caption{Параметры минимакса}
     \label{tab:minimax_params}
@@ -709,77 +709,76 @@ $m^* \leftarrow$ первый допустимый ход\;
 
 Алгоритм использует два следующих параметра: $\alpha$ "--- это наилучшая оценка, которая гарантирована максимизирующему игроку, а $\beta$ "--- это наилучшая оценка, гарантированная минимизирующему. Если в ходе перебора оказывается, что $\beta \le \alpha$, оставшиеся ходы в данном узле дерева можно не рассматривать: они не изменят итогового выбора. Это позволяет уменьшить число рассматриваемых состояний и благодаря этому достичь большей глубины поиска хода.
 
-Схематический пример отсечения приведён на рис.~\ref{fig:alphabeta_tree}. Используется тот же фрагмент дерева, что и на рис.~\ref{fig:minimax_tree}, но ветви просматриваются в порядке предварительной сортировки ходов. Так как установка стены в статической оценке из таблицы~\ref{tab:evaluation_example} выглядит сильнее хода фишкой, эта ветвь проверяется первой. После неё в корне уже известно значение $\alpha = 166$. Затем при просмотре ветви хода фишкой первый ответ соперника даёт значение $132$, то есть для минимизирующего узла уже выполняется $\beta \le \alpha$. Остальные ответы соперника в этой ветви не могут улучшить решение в корне и отсекаются.
-
-\begin{figure}[p]
+Схематический пример отсечения приведён на рис.~\ref{fig:alphabeta_tree}. Используется тот же фрагмент дерева, что и на рис.~\ref{fig:minimax_tree}.
+\begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{%
     \begin{tikzpicture}[
         treeNode/.style={rectangle, rounded corners, draw=black!55, fill=gray!8, align=center, text width=1.55cm, minimum height=0.62cm, font=\scriptsize},
         bestNode/.style={treeNode, fill=gray!22},
-        leafNode/.style={rectangle, rounded corners, draw=black!50, fill=white, align=center, text width=0.72cm, minimum height=0.42cm, inner sep=1pt, font=\scriptsize},
+        leafNode/.style={rectangle, rounded corners, draw=black!50, fill=white, align=center, text width=0.72cm, minimum height=0.56cm, inner sep=0.5pt, font=\tiny},
         bestLeaf/.style={leafNode, fill=gray!22},
-        pruned/.style={rectangle, rounded corners, draw=black!35, fill=gray!5, text=black!45, align=center, text width=0.72cm, minimum height=0.42cm, inner sep=1pt, font=\scriptsize},
+        pruned/.style={rectangle, rounded corners, draw=black!35, fill=gray!5, text=black!45, align=center, text width=0.72cm, minimum height=0.56cm, inner sep=0.5pt, font=\tiny},
         arr/.style={-{Latex[length=1.6mm]}, thick}
     ]
-        \node[bestNode] (root) at (0,0) {MAX\\лучшее\\$\alpha=161$};
+        \node[bestNode] (root) at (0,0) {MAX\\лучшее\\$\alpha=202$};
 
-        \node[bestNode] (m1) at (-4.0,-1.25) {1. A: стена\\MIN: $161$};
-        \node[treeNode] (m2) at (4.0,-1.25) {2. A: ход\\вперёд\\$\beta=124$};
+        \node[bestNode] (m1) at (-4.0,-1.25) {1. A: закрыть\\проход\\MIN: $202$};
+        \node[treeNode] (m2) at (4.0,-1.25) {2. A: ход\\вперёд\\$\beta=-596$};
 
-        \node[bestNode] (p11) at (-6.0,-2.50) {P: контр-\\стена\\MAX: $161$};
-        \node[treeNode] (p12) at (-2.0,-2.50) {P: обход\\MAX $\ge178$};
-        \node[treeNode] (p21) at (2.0,-2.50) {P: вперёд\\MAX: $124$};
-        \node[pruned] (p22) at (6.0,-2.50) {P: стена\\отсечена};
+        \node[bestNode] (p11) at (-6.0,-2.50) {P: назад\\MAX: $202$};
+        \node[treeNode] (p12) at (-2.0,-2.50) {P: стена\\MAX: $220$};
+        \node[treeNode] (p21) at (2.0,-2.50) {P: вперёд\\MAX: $-596$};
+        \node[pruned] (p22) at (6.0,-2.50) {P: назад\\отсечён};
 
-        \node[bestNode] (a111) at (-7.0,-3.75) {A: вперёд\\MIN: $161$};
-        \node[treeNode] (a112) at (-5.0,-3.75) {A: стена\\MIN: $154$};
-        \node[treeNode] (a121) at (-3.0,-3.75) {A: обход\\MIN: $178$};
-        \node[pruned] (a122) at (-1.0,-3.75) {A: стена\\отсечена};
-        \node[treeNode] (a211) at (1.0,-3.75) {A: вперёд\\MIN: $124$};
-        \node[treeNode] (a212) at (3.0,-3.75) {A: стена\\MIN: $118$};
-        \node[pruned] (a221) at (5.0,-3.75) {A: обход\\отсечён};
-        \node[pruned] (a222) at (7.0,-3.75) {A: стена\\отсечена};
+        \node[bestNode] (a111) at (-7.0,-3.75) {A: вперёд\\MIN: $202$};
+        \node[treeNode] (a112) at (-5.0,-3.75) {A: вправо\\MIN: $66$};
+        \node[treeNode] (a121) at (-3.0,-3.75) {A: вперёд\\MIN: $220$};
+        \node[treeNode] (a122) at (-1.0,-3.75) {A: вправо\\MIN: $84$};
+        \node[treeNode] (a211) at (1.0,-3.75) {A: вперёд\\MIN: $-596$};
+        \node[treeNode] (a212) at (3.0,-3.75) {A: вправо\\MIN: $-832$};
+        \node[pruned] (a221) at (5.0,-3.75) {A: вперёд\\отсечён};
+        \node[pruned] (a222) at (7.0,-3.75) {A: вправо\\отсечён};
 
-        \node[bestLeaf] (l111a) at (-7.5,-5.00) {$161$};
-        \node[leafNode] (l111b) at (-6.5,-5.00) {$170$};
-        \node[leafNode] (l112a) at (-5.5,-5.00) {$154$};
-        \node[leafNode] (l112b) at (-4.5,-5.00) {$162$};
-        \node[leafNode] (l121a) at (-3.5,-5.00) {$178$};
-        \node[leafNode] (l121b) at (-2.5,-5.00) {$181$};
-        \node[pruned] (l122a) at (-1.5,-5.00) {--};
-        \node[pruned] (l122b) at (-0.5,-5.00) {--};
-        \node[leafNode] (l211a) at (0.5,-5.00) {$124$};
-        \node[leafNode] (l211b) at (1.5,-5.00) {$130$};
-        \node[leafNode] (l212a) at (2.5,-5.00) {$118$};
-        \node[leafNode] (l212b) at (3.5,-5.00) {$126$};
-        \node[pruned] (l221a) at (4.5,-5.00) {--};
-        \node[pruned] (l221b) at (5.5,-5.00) {--};
-        \node[pruned] (l222a) at (6.5,-5.00) {--};
-        \node[pruned] (l222b) at (7.5,-5.00) {--};
+        \node[bestLeaf] (l111a) at (-7.45,-5.00) {обход\\$202$};
+        \node[leafNode] (l111b) at (-6.55,-5.00) {назад\\$326$};
+        \node[leafNode] (l112a) at (-5.45,-5.00) {обход\\$66$};
+        \node[leafNode] (l112b) at (-4.55,-5.00) {назад\\$190$};
+        \node[leafNode] (l121a) at (-3.45,-5.00) {обход\\$220$};
+        \node[leafNode] (l121b) at (-2.55,-5.00) {назад\\$344$};
+        \node[leafNode] (l122a) at (-1.45,-5.00) {обход\\$84$};
+        \node[leafNode] (l122b) at (-0.55,-5.00) {назад\\$208$};
+        \node[leafNode] (l211a) at (0.55,-5.00) {цель\\$-596$};
+        \node[leafNode] (l211b) at (1.45,-5.00) {назад\\$252$};
+        \node[leafNode] (l212a) at (2.55,-5.00) {цель\\$-832$};
+        \node[leafNode] (l212b) at (3.45,-5.00) {назад\\$16$};
+        \node[pruned] (l221a) at (4.55,-5.00) {--};
+        \node[pruned] (l221b) at (5.45,-5.00) {--};
+        \node[pruned] (l222a) at (6.55,-5.00) {--};
+        \node[pruned] (l222b) at (7.45,-5.00) {--};
 
         \draw[arr] (root) -- (m1);
         \draw[arr] (root) -- (m2);
         \draw[arr] (m1) -- (p11);
         \draw[arr] (m1) -- (p12);
         \draw[arr] (m2) -- (p21);
-        \draw[dashed, gray, -{Latex[length=2mm]}] (m2) -- (p22);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (m2) -- (p22);
         \draw[arr] (p11) -- (a111);
         \draw[arr] (p11) -- (a112);
         \draw[arr] (p12) -- (a121);
-        \draw[dashed, gray, -{Latex[length=1.6mm]}] (p12) -- (a122);
+        \draw[arr] (p12) -- (a122);
         \draw[arr] (p21) -- (a211);
         \draw[arr] (p21) -- (a212);
-        \draw[dashed, gray, -{Latex[length=2mm]}] (p22) -- (a221);
-        \draw[dashed, gray, -{Latex[length=2mm]}] (p22) -- (a222);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (p22) -- (a221);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (p22) -- (a222);
         \draw[arr] (a111) -- (l111a);
         \draw[arr] (a111) -- (l111b);
         \draw[arr] (a112) -- (l112a);
         \draw[arr] (a112) -- (l112b);
         \draw[arr] (a121) -- (l121a);
         \draw[arr] (a121) -- (l121b);
-        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a122) -- (l122a);
-        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a122) -- (l122b);
+        \draw[arr] (a122) -- (l122a);
+        \draw[arr] (a122) -- (l122b);
         \draw[arr] (a211) -- (l211a);
         \draw[arr] (a211) -- (l211b);
         \draw[arr] (a212) -- (l212a);
@@ -788,11 +787,9 @@ $m^* \leftarrow$ первый допустимый ход\;
         \draw[dashed, gray, -{Latex[length=1.6mm]}] (a221) -- (l221b);
         \draw[dashed, gray, -{Latex[length=1.6mm]}] (a222) -- (l222a);
         \draw[dashed, gray, -{Latex[length=1.6mm]}] (a222) -- (l222b);
-
-        \node[font=\small, align=center, text width=13.0cm] at (0,-6.10) {сначала проверяется сильная ветвь со стеной; затем значение $124$ в соседнем поддереве уже не может превысить $\alpha=161$, поэтому оставшиеся узлы не раскрываются};
     \end{tikzpicture}%
     }
-    \caption{Фрагмент альфа-бета отсечения для позиции из примера функции оценки}
+    \caption{Фрагмент дерева альфа-бета отсечения}
     \label{fig:alphabeta_tree}
 \end{figure}
 
