@@ -65,8 +65,8 @@
 
 \chapter*{Реферат}
 
-Объем \total{page} с., \total{chapternum} гл., 13 рис.,
-11 табл., \total{bibnum} источников, \total{appnum} прил.
+Объем \total{page} с., \total{chapternum} гл., 16 рис.,
+12 табл., \total{bibnum} источников, \total{appnum} прил.
 
 \medskip
 
@@ -333,6 +333,8 @@
 
 Вся история перемещений хранится для каждого игрока отдельно и получается алгоритмом путем вызова \texttt{getRecentPositions}.
 
+Такие значения применяются в качестве локальной поправки найденной оценки хода. Самый большой штраф получает возврат фишки алгоритма на недавно посещённую клетку. Он необходим для борьбы с <<зацикливанием>> ходов, когда алгоритм несколько ходов подряд перемещает фишку между двумя соседними клетками. Штраф за ход назад меньше, потому что в игре <<Коридор>> он может быть оправдан обходом стены, но алгоритм не должен выбирать его без заметной стратегической причины. Бонус за движение к цели или уменьшение кратчайшего пути намеренно ниже штрафов за <<зацикливание>>. Они подталкивают алгоритм двигать фишку к целевой линии, но не перекрывают основные факторы функции оценки, связанные с длиной путей, стенами и победными позициями.
+
 \subsection*{Функция оценки позиции}
 
 Функция оценки \texttt{evaluate()} является главным компонентом всех реализованных в игровом приложении алгоритмов. Благодаря ей каждому состоянии игры сопоставляется числовое значение, которое описывает его стратегическую выгоду для программного соперника. Оценка вычисляется как взвешенная сумма следующих параметров:
@@ -410,7 +412,48 @@ e(d) = \begin{cases}
 \lambda_1 = 65,\quad \lambda_2 = 4,\quad \lambda_3 = 3,\quad \lambda_4 = 18,\quad \lambda_5 = 6,\quad \lambda_6 = 165,\quad \lambda_7 = 175.
 \]
 
-Пример использования функции оценки приведён в таблице~\ref{tab:evaluation_example}. Значения являются иллюстративными. Второй ход получает большую оценку, потому что сильнее увеличивает преимущество по кратчайшему пути, несмотря на меньшую мобильность.
+Пример использования функции оценки удобно рассмотреть на конкретной позиции. На рис.~\ref{fig:evaluation_example_board} показаны два варианта продолжения для синей фишки алгоритма: ход вперёд и установка стены перед соперником. После применения каждого из этих вариантов для получившейся позиции вычисляется вектор признаков, а затем итоговая оценка по формуле $F(s)$.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[scale=0.62, cell/.style={draw=black!45, minimum size=0.48cm}]
+        \begin{scope}
+            \node[font=\small] at (3,0.65) {};
+            \foreach \x in {0,...,6} {
+                \foreach \y in {0,...,6} {
+                    \node[cell] at (\x,-\y) {};
+                }
+            }
+            \draw[line width=3pt, brown!80!black] (1.5,-2.5) -- (3.5,-2.5);
+            \draw[line width=3pt, brown!80!black] (4.5,-3.5) -- (4.5,-5.5);
+            \fill[blue!75] (3,-5) circle (0.2);
+            \fill[red!75] (3,-2) circle (0.2);
+            \draw[very thick, green!55!black, -{Latex[length=2mm]}] (3,-5) -- (3,-4.25);
+            \fill[green!40] (3,-4) circle (0.16);
+            \node[font=\scriptsize] at (3,-5) {\textcolor{white}{A}};
+            \node[font=\scriptsize] at (3,-2) {\textcolor{white}{P}};
+        \end{scope}
+        \begin{scope}[xshift=8.3cm]
+            \node[font=\small] at (3,0.65) {};
+            \foreach \x in {0,...,6} {
+                \foreach \y in {0,...,6} {
+                    \node[cell] at (\x,-\y) {};
+                }
+            }
+            \draw[line width=3pt, brown!80!black] (1.5,-2.5) -- (3.5,-2.5);
+            \draw[line width=3pt, brown!80!black] (4.5,-3.5) -- (4.5,-5.5);
+            \draw[line width=4pt, green!55!black] (2.5,-1.5) -- (4.5,-1.5);
+            \fill[blue!75] (3,-5) circle (0.2);
+            \fill[red!75] (3,-2) circle (0.2);
+            \node[font=\scriptsize] at (3,-5) {\textcolor{white}{A}};
+            \node[font=\scriptsize] at (3,-2) {\textcolor{white}{P}};
+        \end{scope}
+    \end{tikzpicture}
+    \caption{Два варианта хода, сравниваемые функцией оценки}
+    \label{fig:evaluation_example_board}
+\end{figure}
+
+Числовое сравнение этих вариантов приведено в таблице~\ref{tab:evaluation_example}. Второй ход получает большую оценку, потому что сильнее увеличивает преимущество по кратчайшему пути, несмотря на меньшую мобильность и расход одной стены.
 
 \begin{table}[h]
 \centering
@@ -421,12 +464,21 @@ e(d) = \begin{cases}
 \toprule
 Вариант & $d_p-d_a$ & $\mathrm{mob}_a$ & $-\mathrm{mob}_p$ & $w_a-w_p$ & $\mathrm{prog}_a-\mathrm{prog}_p$ & $e(d_a)$ & $-e(d_p)$ & $F(s)$ \\
 \midrule
-Ход фишкой вперёд & 2 & 3 & -2 & 0  & 1 & 0 & 0 & 262 \\
-Установка стены   & 4 & 2 & -1 & -1 & 0 & 0 & 0 & 474 \\
+Ход фишкой вперёд & 2 & 4 & -3 & 0  & 1 & 0 & 0 & 143 \\
+Установка стены   & 4 & 4 & -2 & -1 & 0 & 0 & 0 & 252 \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
+
+Для первого варианта итоговая оценка равна
+\[
+2 \cdot 65 + 4 \cdot 4 - 3 \cdot 3 + 0 \cdot 18 + 1 \cdot 6 = 143.
+\]
+Для второго варианта:
+\[
+4 \cdot 65 + 4 \cdot 4 - 2 \cdot 3 - 1 \cdot 18 = 252.
+\]
 
 \subsection*{Коррекция весов}
 
@@ -504,6 +556,92 @@ $M \leftarrow$ \texttt{getMoves}$(s)$\;
 
 Максимальная глубина $d_{\max}$ и лимит времени $T$ зависят от выбранных пользователем уровня сложности алгоритма и размера игрового поля.
 
+Пример выбора хода Минимаксом показан на рис.~\ref{fig:minimax_tree}. Он построен на той же позиции, что и пример функции оценки на рис.~\ref{fig:evaluation_example_board}: алгоритм сравнивает ход фишкой вперёд и установку стены. Таблица~\ref{tab:evaluation_example} показывает статическую оценку сразу после хода алгоритма, а дерево демонстрирует более глубокий фрагмент поиска: ход алгоритма, ответ соперника, следующий ход алгоритма и оценка листовой позиции. Значения поднимаются снизу вверх: на уровне алгоритма берётся максимум, на уровне соперника "--- минимум.
+
+\begin{figure}[p]
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[
+        treeNode/.style={rectangle, rounded corners, draw=black!55, fill=gray!8, align=center, text width=1.55cm, minimum height=0.62cm, font=\scriptsize},
+        bestNode/.style={treeNode, fill=gray!22},
+        leafNode/.style={rectangle, rounded corners, draw=black!50, fill=white, align=center, text width=0.72cm, minimum height=0.42cm, inner sep=1pt, font=\scriptsize},
+        bestLeaf/.style={leafNode, fill=gray!22},
+        arr/.style={-{Latex[length=1.6mm]}, thick}
+    ]
+        \node[bestNode] (root) at (0,0) {MAX\\позиция\\$\max(124,161)=161$};
+
+        \node[treeNode] (m1) at (-4.0,-1.25) {A: ход\\вперёд\\MIN: $124$};
+        \node[bestNode] (m2) at (4.0,-1.25) {A: стена\\MIN: $161$};
+
+        \node[treeNode] (p11) at (-6.0,-2.50) {P: вперёд\\MAX: $124$};
+        \node[treeNode] (p12) at (-2.0,-2.50) {P: стена\\MAX: $146$};
+        \node[bestNode] (p21) at (2.0,-2.50) {P: контр-\\стена\\MAX: $161$};
+        \node[treeNode] (p22) at (6.0,-2.50) {P: обход\\MAX: $178$};
+
+        \node[bestNode] (a111) at (-7.0,-3.75) {A: вперёд\\MIN: $124$};
+        \node[treeNode] (a112) at (-5.0,-3.75) {A: стена\\MIN: $118$};
+        \node[treeNode] (a121) at (-3.0,-3.75) {A: обход\\MIN: $146$};
+        \node[treeNode] (a122) at (-1.0,-3.75) {A: стена\\MIN: $139$};
+        \node[bestNode] (a211) at (1.0,-3.75) {A: вперёд\\MIN: $161$};
+        \node[treeNode] (a212) at (3.0,-3.75) {A: стена\\MIN: $154$};
+        \node[treeNode] (a221) at (5.0,-3.75) {A: обход\\MIN: $178$};
+        \node[treeNode] (a222) at (7.0,-3.75) {A: стена\\MIN: $169$};
+
+        \node[bestLeaf] (l111a) at (-7.5,-5.00) {$124$};
+        \node[leafNode] (l111b) at (-6.5,-5.00) {$130$};
+        \node[leafNode] (l112a) at (-5.5,-5.00) {$118$};
+        \node[leafNode] (l112b) at (-4.5,-5.00) {$126$};
+        \node[leafNode] (l121a) at (-3.5,-5.00) {$146$};
+        \node[leafNode] (l121b) at (-2.5,-5.00) {$153$};
+        \node[leafNode] (l122a) at (-1.5,-5.00) {$139$};
+        \node[leafNode] (l122b) at (-0.5,-5.00) {$141$};
+        \node[bestLeaf] (l211a) at (0.5,-5.00) {$161$};
+        \node[leafNode] (l211b) at (1.5,-5.00) {$170$};
+        \node[leafNode] (l212a) at (2.5,-5.00) {$154$};
+        \node[leafNode] (l212b) at (3.5,-5.00) {$162$};
+        \node[leafNode] (l221a) at (4.5,-5.00) {$178$};
+        \node[leafNode] (l221b) at (5.5,-5.00) {$181$};
+        \node[leafNode] (l222a) at (6.5,-5.00) {$169$};
+        \node[leafNode] (l222b) at (7.5,-5.00) {$173$};
+
+        \draw[arr] (root) -- (m1);
+        \draw[arr] (root) -- (m2);
+        \draw[arr] (m1) -- (p11);
+        \draw[arr] (m1) -- (p12);
+        \draw[arr] (m2) -- (p21);
+        \draw[arr] (m2) -- (p22);
+        \draw[arr] (p11) -- (a111);
+        \draw[arr] (p11) -- (a112);
+        \draw[arr] (p12) -- (a121);
+        \draw[arr] (p12) -- (a122);
+        \draw[arr] (p21) -- (a211);
+        \draw[arr] (p21) -- (a212);
+        \draw[arr] (p22) -- (a221);
+        \draw[arr] (p22) -- (a222);
+        \draw[arr] (a111) -- (l111a);
+        \draw[arr] (a111) -- (l111b);
+        \draw[arr] (a112) -- (l112a);
+        \draw[arr] (a112) -- (l112b);
+        \draw[arr] (a121) -- (l121a);
+        \draw[arr] (a121) -- (l121b);
+        \draw[arr] (a122) -- (l122a);
+        \draw[arr] (a122) -- (l122b);
+        \draw[arr] (a211) -- (l211a);
+        \draw[arr] (a211) -- (l211b);
+        \draw[arr] (a212) -- (l212a);
+        \draw[arr] (a212) -- (l212b);
+        \draw[arr] (a221) -- (l221a);
+        \draw[arr] (a221) -- (l221b);
+        \draw[arr] (a222) -- (l222a);
+        \draw[arr] (a222) -- (l222b);
+
+        \node[font=\small, align=center, text width=13.0cm] at (0,-6.10) {при просмотре на четыре полухода ход фишкой может быть снижен соперником до $124$, а установка стены сохраняет гарантированную оценку $161$};
+    \end{tikzpicture}%
+    }
+    \caption{Фрагмент дерева Минимакса для позиции из примера функции оценки}
+    \label{fig:minimax_tree}
+\end{figure}
+
 \begin{table}[h]
     \centering
     \caption{Параметры минимакса}
@@ -571,6 +709,93 @@ $m^* \leftarrow$ первый допустимый ход\;
 \subsection*{Альфа-бета отсечение}
 
 Алгоритм использует два следующих параметра: $\alpha$ "--- это наилучшая оценка, которая гарантирована максимизирующему игроку, а $\beta$ "--- это наилучшая оценка, гарантированная минимизирующему. Если в ходе перебора оказывается, что $\beta \le \alpha$, оставшиеся ходы в данном узле дерева можно не рассматривать: они не изменят итогового выбора. Это позволяет уменьшить число рассматриваемых состояний и благодаря этому достичь большей глубины поиска хода.
+
+Схематический пример отсечения приведён на рис.~\ref{fig:alphabeta_tree}. Используется тот же фрагмент дерева, что и на рис.~\ref{fig:minimax_tree}, но ветви просматриваются в порядке предварительной сортировки ходов. Так как установка стены в статической оценке из таблицы~\ref{tab:evaluation_example} выглядит сильнее хода фишкой, эта ветвь проверяется первой. После неё в корне уже известно значение $\alpha = 166$. Затем при просмотре ветви хода фишкой первый ответ соперника даёт значение $132$, то есть для минимизирующего узла уже выполняется $\beta \le \alpha$. Остальные ответы соперника в этой ветви не могут улучшить решение в корне и отсекаются.
+
+\begin{figure}[p]
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[
+        treeNode/.style={rectangle, rounded corners, draw=black!55, fill=gray!8, align=center, text width=1.55cm, minimum height=0.62cm, font=\scriptsize},
+        bestNode/.style={treeNode, fill=gray!22},
+        leafNode/.style={rectangle, rounded corners, draw=black!50, fill=white, align=center, text width=0.72cm, minimum height=0.42cm, inner sep=1pt, font=\scriptsize},
+        bestLeaf/.style={leafNode, fill=gray!22},
+        pruned/.style={rectangle, rounded corners, draw=black!35, fill=gray!5, text=black!45, align=center, text width=0.72cm, minimum height=0.42cm, inner sep=1pt, font=\scriptsize},
+        arr/.style={-{Latex[length=1.6mm]}, thick}
+    ]
+        \node[bestNode] (root) at (0,0) {MAX\\лучшее\\$\alpha=161$};
+
+        \node[bestNode] (m1) at (-4.0,-1.25) {1. A: стена\\MIN: $161$};
+        \node[treeNode] (m2) at (4.0,-1.25) {2. A: ход\\вперёд\\$\beta=124$};
+
+        \node[bestNode] (p11) at (-6.0,-2.50) {P: контр-\\стена\\MAX: $161$};
+        \node[treeNode] (p12) at (-2.0,-2.50) {P: обход\\MAX $\ge178$};
+        \node[treeNode] (p21) at (2.0,-2.50) {P: вперёд\\MAX: $124$};
+        \node[pruned] (p22) at (6.0,-2.50) {P: стена\\отсечена};
+
+        \node[bestNode] (a111) at (-7.0,-3.75) {A: вперёд\\MIN: $161$};
+        \node[treeNode] (a112) at (-5.0,-3.75) {A: стена\\MIN: $154$};
+        \node[treeNode] (a121) at (-3.0,-3.75) {A: обход\\MIN: $178$};
+        \node[pruned] (a122) at (-1.0,-3.75) {A: стена\\отсечена};
+        \node[treeNode] (a211) at (1.0,-3.75) {A: вперёд\\MIN: $124$};
+        \node[treeNode] (a212) at (3.0,-3.75) {A: стена\\MIN: $118$};
+        \node[pruned] (a221) at (5.0,-3.75) {A: обход\\отсечён};
+        \node[pruned] (a222) at (7.0,-3.75) {A: стена\\отсечена};
+
+        \node[bestLeaf] (l111a) at (-7.5,-5.00) {$161$};
+        \node[leafNode] (l111b) at (-6.5,-5.00) {$170$};
+        \node[leafNode] (l112a) at (-5.5,-5.00) {$154$};
+        \node[leafNode] (l112b) at (-4.5,-5.00) {$162$};
+        \node[leafNode] (l121a) at (-3.5,-5.00) {$178$};
+        \node[leafNode] (l121b) at (-2.5,-5.00) {$181$};
+        \node[pruned] (l122a) at (-1.5,-5.00) {--};
+        \node[pruned] (l122b) at (-0.5,-5.00) {--};
+        \node[leafNode] (l211a) at (0.5,-5.00) {$124$};
+        \node[leafNode] (l211b) at (1.5,-5.00) {$130$};
+        \node[leafNode] (l212a) at (2.5,-5.00) {$118$};
+        \node[leafNode] (l212b) at (3.5,-5.00) {$126$};
+        \node[pruned] (l221a) at (4.5,-5.00) {--};
+        \node[pruned] (l221b) at (5.5,-5.00) {--};
+        \node[pruned] (l222a) at (6.5,-5.00) {--};
+        \node[pruned] (l222b) at (7.5,-5.00) {--};
+
+        \draw[arr] (root) -- (m1);
+        \draw[arr] (root) -- (m2);
+        \draw[arr] (m1) -- (p11);
+        \draw[arr] (m1) -- (p12);
+        \draw[arr] (m2) -- (p21);
+        \draw[dashed, gray, -{Latex[length=2mm]}] (m2) -- (p22);
+        \draw[arr] (p11) -- (a111);
+        \draw[arr] (p11) -- (a112);
+        \draw[arr] (p12) -- (a121);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (p12) -- (a122);
+        \draw[arr] (p21) -- (a211);
+        \draw[arr] (p21) -- (a212);
+        \draw[dashed, gray, -{Latex[length=2mm]}] (p22) -- (a221);
+        \draw[dashed, gray, -{Latex[length=2mm]}] (p22) -- (a222);
+        \draw[arr] (a111) -- (l111a);
+        \draw[arr] (a111) -- (l111b);
+        \draw[arr] (a112) -- (l112a);
+        \draw[arr] (a112) -- (l112b);
+        \draw[arr] (a121) -- (l121a);
+        \draw[arr] (a121) -- (l121b);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a122) -- (l122a);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a122) -- (l122b);
+        \draw[arr] (a211) -- (l211a);
+        \draw[arr] (a211) -- (l211b);
+        \draw[arr] (a212) -- (l212a);
+        \draw[arr] (a212) -- (l212b);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a221) -- (l221a);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a221) -- (l221b);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a222) -- (l222a);
+        \draw[dashed, gray, -{Latex[length=1.6mm]}] (a222) -- (l222b);
+
+        \node[font=\small, align=center, text width=13.0cm] at (0,-6.10) {сначала проверяется сильная ветвь со стеной; затем значение $124$ в соседнем поддереве уже не может превысить $\alpha=161$, поэтому оставшиеся узлы не раскрываются};
+    \end{tikzpicture}%
+    }
+    \caption{Фрагмент альфа-бета отсечения для позиции из примера функции оценки}
+    \label{fig:alphabeta_tree}
+\end{figure}
 
 \subsection*{Сортировка ходов}
 
@@ -814,51 +1039,87 @@ AlphaBeta  & 49--0--1 & 39--10--1 & 33--17--0 & --- \\
 }
 \end{table}
 
-Вторая форма "--- агрегированная таблица по каждому алгоритму. Она удобнее для общего вывода, поскольку показывает не только победы, но и вычислительные затраты. Для наглядности числовые столбцы дополнены цветовой шкалой: зелёный цвет отмечает лучшие значения, жёлтый "--- промежуточные, розовый "--- худшие в пределах соответствующего столбца.
+Вторая форма "--- агрегированная таблица по каждому алгоритму. Для читаемости она разделена на две части: показатели качества игры и вычислительные показатели. В таблицах~\ref{tab:summary_quality} и~\ref{tab:summary_cost} числовые столбцы дополнены цветовой шкалой: зелёный цвет отмечает лучшие значения, жёлтый "--- промежуточные, розовый "--- худшие в пределах соответствующего столбца.
+
+В таблице качества игры столбец <<Партий>> показывает число партий, в которых участвовал алгоритм. <<Победы>> и <<Поражения>> отражают результат партии независимо от того, первым или вторым игроком выступал алгоритм. <<Лимит>> означает партии, остановленные по максимальному числу ходов без достижения целевой линии. <<Доля побед>> "--- отношение числа побед к общему числу партий.
 
 \begin{table}[h]
 \centering
-\caption{Сводная статистика алгоритмов}
-\label{tab:summary_metrics}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrrrrrrr}
+\caption{Сводная статистика качества игры}
+\label{tab:summary_quality}
+\begin{tabular}{lrrrrr}
 \toprule
-Алгоритм & Партий & Победы & Поражения & Лимит & Доля побед & Очки/партия & Ср. ходов & Ср. мс & Ср. глуб. & Ср. узлы & Ср. отсеч. \\
+Алгоритм & Партий & Победы & Поражения & Лимит & Доля побед \\
 \midrule
-Случайный  & \neutralcell{150} & \badcell{0}   & \badcell{145} & \badcell{5} & \badcell{0,00\%}  & \badcell{0,02} & \badcell{121,51} & \goodcell{1561,2} & \badcell{20,44} & \goodcell{1081,4} & \midcell{150,0} \\
-MiniMax    & \neutralcell{150} & \midcell{84}  & \midcell{62}  & \midcell{4} & \midcell{56,00\%} & \midcell{0,57} & \midcell{105,58} & \goodcell{1975,9} & \midcell{21,41} & \midcell{2138,5} & \midcell{185,5} \\
-MonteCarlo & \neutralcell{150} & \midcell{88}  & \midcell{59}  & \midcell{3} & \midcell{58,67\%} & \midcell{0,60} & \badcell{126,77} & \badcell{3879,3} & \goodcell{56,45} & \midcell{1214,8} & \midcell{157,6} \\
-AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} & \goodcell{80,67\%} & \goodcell{0,81} & \goodcell{97,84} & \midcell{2730,3} & \midcell{22,34} & \badcell{2998,8} & \goodcell{493,2} \\
+Случайный  & \neutralcell{150} & \badcell{0}   & \badcell{145} & \badcell{5} & \badcell{0,00\%} \\
+MiniMax    & \neutralcell{150} & \midcell{84}  & \midcell{62}  & \midcell{4} & \midcell{56,00\%} \\
+MonteCarlo & \neutralcell{150} & \midcell{88}  & \midcell{59}  & \midcell{3} & \midcell{58,67\%} \\
+AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} & \goodcell{80,67\%} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular}
 \end{table}
 
-Для более детального анализа вычислительной стоимости были дополнительно сохранены средние показатели по каждой паре алгоритмов. Они приведены в таблице~\ref{tab:pairwise_metrics}.
+Вычислительные показатели позволяют оценить цену найденного качества игры. <<Ср. ходов>> показывает среднюю длину партии. <<Ср. мс>> "--- среднее время выбора одного хода алгоритмом. <<Ср. глуб.>> отражает достигнутую глубину поиска или среднюю глубину рассмотрения дерева. <<Ср. узлы>> "--- среднее количество просмотренных состояний, а <<Ср. отсеч.>> "--- среднее число ветвей, которые были отброшены эвристиками или альфа-бета отсечением.
 
 \begin{table}[h]
 \centering
-\caption{Детальная статистика попарных сравнений}
-\label{tab:pairwise_metrics}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{llrrrrrrrrr}
+\caption{Сводная статистика вычислительных показателей}
+\label{tab:summary_cost}
+\begin{tabular}{lrrrrr}
 \toprule
-Алгоритм P1 & Алгоритм P2 & Игры & Победы P1 & Победы P2 & Лимит & Ср. ходов & Ср. мс & Ср. глуб. & Ср. узлы & Ср. отсеч. \\
+Алгоритм & Ср. ходов & Ср. мс & Ср. глуб. & Ср. узлы & Ср. отсеч. \\
 \midrule
-Случайный  & MiniMax    & \neutralcell{50} & \badcell{0}  & \goodcell{48} & \badcell{2} & \midcell{102,24} & \goodcell{303,4}  & \badcell{2,47}  & \goodcell{948,3}  & \badcell{0,0} \\
-Случайный  & MonteCarlo & \neutralcell{50} & \badcell{0}  & \goodcell{48} & \badcell{2} & \badcell{161,64} & \midcell{3060,4} & \goodcell{55,01} & \goodcell{162,1}  & \badcell{0,0} \\
-Случайный  & AlphaBeta  & \neutralcell{50} & \badcell{0}  & \goodcell{49} & \midcell{1} & \midcell{100,64} & \goodcell{1319,9} & \badcell{3,85}  & \midcell{2133,9} & \midcell{450,0} \\
-MiniMax    & MonteCarlo & \neutralcell{50} & \goodcell{26} & \midcell{23} & \midcell{1} & \midcell{120,14} & \midcell{3665,3} & \goodcell{56,46} & \goodcell{1043,5} & \badcell{0,0} \\
-MiniMax    & AlphaBeta  & \neutralcell{50} & \midcell{10} & \midcell{39} & \midcell{1} & \goodcell{94,36}  & \goodcell{1958,9} & \badcell{5,29}  & \badcell{4423,8} & \goodcell{556,6} \\
-MonteCarlo & AlphaBeta  & \neutralcell{50} & \midcell{17} & \midcell{33} & \goodcell{0} & \goodcell{98,52}  & \badcell{4912,2} & \goodcell{57,88} & \midcell{2438,9} & \goodcell{472,9} \\
+Случайный  & \badcell{121,51} & \goodcell{1561,2} & \badcell{20,44} & \goodcell{1081,4} & \midcell{150,0} \\
+MiniMax    & \midcell{105,58} & \goodcell{1975,9} & \midcell{21,41} & \midcell{2138,5} & \midcell{185,5} \\
+MonteCarlo & \badcell{126,77} & \badcell{3879,3} & \goodcell{56,45} & \midcell{1214,8} & \midcell{157,6} \\
+AlphaBeta  & \goodcell{97,84} & \midcell{2730,3} & \midcell{22,34} & \badcell{2998,8} & \goodcell{493,2} \\
 \bottomrule
-\end{tabular}%
+\end{tabular}
+\end{table}
+
+Для более детального анализа были дополнительно сохранены показатели по каждой паре алгоритмов. Игровые результаты приведены в таблице~\ref{tab:pairwise_results}, а вычислительная стоимость "--- в таблице~\ref{tab:pairwise_cost}.
+
+\begin{table}[h]
+\centering
+\caption{Детальные результаты попарных сравнений}
+\label{tab:pairwise_results}
+\begin{tabular}{llrrrr}
+\toprule
+Алгоритм P1 & Алгоритм P2 & Игры & Победы P1 & Победы P2 & Лимит \\
+\midrule
+Случайный  & MiniMax    & \neutralcell{50} & \badcell{0}  & \goodcell{48} & \badcell{2} \\
+Случайный  & MonteCarlo & \neutralcell{50} & \badcell{0}  & \goodcell{48} & \badcell{2} \\
+Случайный  & AlphaBeta  & \neutralcell{50} & \badcell{0}  & \goodcell{49} & \midcell{1} \\
+MiniMax    & MonteCarlo & \neutralcell{50} & \goodcell{26} & \midcell{23} & \midcell{1} \\
+MiniMax    & AlphaBeta  & \neutralcell{50} & \midcell{10} & \midcell{39} & \midcell{1} \\
+MonteCarlo & AlphaBeta  & \neutralcell{50} & \midcell{17} & \midcell{33} & \goodcell{0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Детальная вычислительная стоимость попарных сравнений}
+\label{tab:pairwise_cost}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrrrr}
+\toprule
+Алгоритм P1 & Алгоритм P2 & Ср. ходов & Ср. мс & Ср. глуб. & Ср. узлы & Ср. отсеч. \\
+\midrule
+Случайный  & MiniMax    & \midcell{102,24} & \goodcell{303,4}  & \badcell{2,47}  & \goodcell{948,3}  & \badcell{0,0} \\
+Случайный  & MonteCarlo & \badcell{161,64} & \midcell{3060,4} & \goodcell{55,01} & \goodcell{162,1}  & \badcell{0,0} \\
+Случайный  & AlphaBeta  & \midcell{100,64} & \goodcell{1319,9} & \badcell{3,85}  & \midcell{2133,9} & \midcell{450,0} \\
+MiniMax    & MonteCarlo & \midcell{120,14} & \midcell{3665,3} & \goodcell{56,46} & \goodcell{1043,5} & \badcell{0,0} \\
+MiniMax    & AlphaBeta  & \goodcell{94,36}  & \goodcell{1958,9} & \badcell{5,29}  & \badcell{4423,8} & \goodcell{556,6} \\
+MonteCarlo & AlphaBeta  & \goodcell{98,52}  & \badcell{4912,2} & \goodcell{57,88} & \midcell{2438,9} & \goodcell{472,9} \\
+\bottomrule
+\end{tabular}
 }
 \end{table}
 
 \section{Сравнение весов функции оценки}
 
-Для проверки полезности механизма обновления весов функции оценки проводится отдельный эксперимент. Один и тот же алгоритм запускается против своей копии, причем одна копия использует веса, которые были выданы функции оценки до начала их обновления, \texttt{EvaluationWeights.defaults()}, а другая "--- веса, полученные после self-play обучения и сохранённые в \texttt{evaluation-weights.properties}.
+Отдельный эксперимент с весами функции оценки используется не как окончательное доказательство превосходства обученной версии, а как проверка того, что механизм коррекции не ухудшает поведение алгоритма в одинаковых условиях. Один и тот же алгоритм запускается против своей копии, причем одна копия использует начальные вручную заданные веса \texttt{EvaluationWeights.defaults()}, а другая "--- веса, полученные после self-play обучения и сохранённые в \texttt{evaluation-weights.properties}.
 
 Играется 50 партий на поле $11 \times 11$ с одинаковым уровнем сложности \texttt{HARD} для обеих вариаций алгоритма, роли первого и второго игрока чередуются.
 
@@ -869,7 +1130,7 @@ MonteCarlo & AlphaBeta  & \neutralcell{50} & \midcell{17} & \midcell{33} & \good
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrrrrr}
 \toprule
-Алгоритм & Партий & Победы нач. & Победы обновл. & Ничьи & Ср. ходов & Ср. мс & Ср. глуб. & Ср. узлы & Ср. отсеч. \\
+Алгоритм & Партий & Победы нач. & Победы обновл. & Лимит & Ср. ходов & Ср. мс & Ср. глуб. & Ср. узлы & Ср. отсеч. \\
 \midrule
 AlphaBeta & 50 & 22 & 24 & 4 & 117,84 & 2903,7 & 6,66 & 5213,9 & 1046,5 \\
 \bottomrule
@@ -877,13 +1138,13 @@ AlphaBeta & 50 & 22 & 24 & 4 & 117,84 & 2903,7 & 6,66 & 5213,9 & 1046,5 \\
 }
 \end{table}
 
-По результатам эксперимента обновлённые веса функции оценки дали небольшой перевес: версия AlphaBeta с обновлёнными весами выиграла 24 партии против 22 побед версии с начальными, а ещё 4 партии завершились, достигнув лимита ходов. Изменение весов функции оценки не приводит к резкому росту <<производительности>> алгоритма, но в одинаковых условиях даёт небольшой прирост в пользу обученной функции оценки.
+По результатам эксперимента версия AlphaBeta с обновлёнными весами выиграла 24 партии против 22 побед версии с начальными весами, а ещё 4 партии завершились по лимиту ходов. Такая разница слишком мала, чтобы считать её статистически убедительным доказательством превосходства обновлённых весов. Поэтому корректный вывод состоит в другом: текущий механизм обучения не дал заметного ухудшения и показал небольшой положительный сдвиг, но для строгого подтверждения преимущества требуется более крупная серия партий или сравнение нескольких независимых запусков обучения. В рамках данной работы этот эксперимент рассматривается как предварительная проверка работоспособности механизма сохранения и применения обученных весов.
 
 \section{Анализ результатов}
 
-По итогам эксперимента наибольшую долю побед показал \texttt{AlphaBetaAlgorithm}: 121 победа из 150 партий, что соответствует $80{,}67\%$ побед. Алгоритм уверенно выиграл все три попарных сравнения. При этом среднее время хода AlphaBeta оказалось ниже, чем у MonteCarlo, но выше, чем у MiniMax и случайного алгоритма.
+По итогам проведенного эксперимента наибольшую долю побед показал \texttt{AlphaBetaAlgorithm}: 121 победа из 150 партий, что соответствует $80{,}67\%$ побед. Алгоритм уверенно выиграл все три попарных сравнения. При этом среднее время хода AlphaBeta оказалось ниже, чем у MonteCarlo, но выше, чем у MiniMax и случайного алгоритма.
 
-MiniMax и MonteCarlo показали близкие результаты по доле побед: $56{,}00\%$ и $58{,}67\%$ соответственно. В прямом сравнении MiniMax выиграл 26 партий, MonteCarlo "--- 23, одна партия завершилась по лимиту ходов. Это показывает, что статистически их игровая сила в выбранных условиях близка, однако MonteCarlo требует заметно большего времени на ход.
+MiniMax и MonteCarlo показали близкие результаты по доле побед: $56{,}00\%$ и $58{,}67\%$ соответственно. В прямом сравнении MiniMax выиграл 26 партий, в то время как MonteCarlo "--- 23, одна партия завершилась по лимиту ходов. Это показывает, что статистически их игровая сила в выбранных условиях близка, однако MonteCarlo требует заметно большего времени на ход.
 
 Случайный алгоритм не выиграл ни одной партии. Тем не менее несколько партий с его участием завершились по лимиту ходов, что связано с большими размером поля $11 \times 11$ и числом возможных ходов.
 
@@ -937,13 +1198,13 @@ MiniMax и MonteCarlo показали близкие результаты по 
     \label{fig:architecture}
 \end{figure}
 
-\textit{Модель} содержит классы, описывающие игровые объекты. Класс \texttt{Position} хранит координаты клетки $(i, j)$ и предоставляет метод \texttt{move(rowDelta, colDelta)} для вычисления соседней позиции. Класс \texttt{BoardTile} описывает одну клетку поля четырьмя булевыми флагами доступности переходов. Класс \texttt{Board} хранит граф поля в виде \texttt{HashMap<Position, BoardTile>}, позиции фишек обоих игроков и реализует все операции с доской: размещение перегородок (\texttt{placeWall}), получение доступных ходов (\texttt{getAvailableMoves})и полное копирование (\texttt{copy}). Класс \texttt{Move} описывает ход: его тип (\texttt{MOVE\_PLAYER} или \texttt{PLACE\_WALL}), идентификатор игрока и позиции начала и конца перемещения или стены. Класс \texttt{Game} хранит конфигурацию текущей партии: размер игрового поля (\texttt{GameSize}), объекты игроков, номер текущего хода, время начала игры и флаг ее завершения.
+\textit{Модель} содержит классы, описывающие игровые объекты. Класс \texttt{Position} хранит координаты клетки $(i, j)$ и предоставляет метод \texttt{move()} для вычисления соседней позиции. Класс \texttt{BoardTile} описывает одну клетку поля четырьмя булевыми флагами доступности переходов. Класс \texttt{Board} хранит граф поля в виде \texttt{HashMap<Position, BoardTile>}, позиции фишек обоих игроков и реализует все операции с доской: размещение перегородок (\texttt{placeWall}), получение доступных ходов (\texttt{getAvailableMoves})и полное копирование (\texttt{copy}). Класс \texttt{Move} описывает ход: его тип (\texttt{MOVE\_PLAYER} или \texttt{PLACE\_WALL}), идентификатор игрока и позиции начала и конца перемещения или стены. Класс \texttt{Game} хранит конфигурацию текущей партии: размер игрового поля (\texttt{GameSize}), объекты игроков, номер текущего хода, время начала игры и флаг ее завершения.
 
-\textit{Игроки} реализуют иерархию через абстрактный класс \texttt{Player} с методом \texttt{getMove}. Класс \texttt{HumanPlayer} возвращает \texttt{null}, поскольку ход игрока получается через его взаимодействие с интерфейсом игрового приложения; класс \texttt{ComputerPlayer} делегирует вызов конкретному объекту \texttt{Algorithm}. Фабрика \texttt{ComputerPlayerFabric} создаёт нужную реализацию алгоритма по типу и уровню сложности в соответствии с предпочтениями пользователя приложения.
+\textit{Игроки} реализуют иерархию через абстрактный класс \texttt{Player} с методом \texttt{getMove}. Класс \texttt{HumanPlayer} возвращает \texttt{null}, поскольку ход игрока получается через его взаимодействие с интерфейсом игрового приложения. Специальный класс \texttt{ComputerPlayer} делегирует вызов конкретному объекту \texttt{Algorithm}. Фабрика \texttt{ComputerPlayerFabric} создаёт нужную реализацию алгоритма по типу и уровню сложности в соответствии с предпочтениями пользователя приложения.
 
-\textit{Алгоритмы} описаны в главе 2. Каждый из них реализует интерфейс \texttt{Algorithm}. Класс \texttt{AlgorithmReport} является неизменяемой записью с результатами последнего хода: выбранный ход, его оценка, достигнутая глубина поиска, количество рассмотренных узлов, количество отсечений ветвей дерева игры, время в миллисекундах, затраченное на анализ хода и его текстовое пояснение. Класс \texttt{EvaluationFeatures} хранит вектор признаков состояния; \texttt{EvaluationWeights} "--- веса; \texttt{EvaluationWeightsStore} управляет загрузкой и сохранением весов для историчности.
+\textit{Алгоритмы} описаны в главе 2. Каждый из них реализует единый интерфейс \texttt{Algorithm}. Класс \texttt{AlgorithmReport} является неизменяемой записью с результатами последнего хода: выбранный ход, его оценка, достигнутая глубина поиска, количество рассмотренных узлов, количество отсечений ветвей дерева игры, время в миллисекундах, затраченное на анализ хода и его текстовое пояснение. Класс \texttt{EvaluationFeatures} хранит вектор признаков состояния; \texttt{EvaluationWeights} "--- веса; \texttt{EvaluationWeightsStore} управляет загрузкой и сохранением весов для историчности.
 
-\textit{Сервисный слой} включает несколько компонентов. \texttt{BoardFactory} создаёт начальное состояние доски заданного размера. Класс \texttt{GameRules} проверяет корректность установки стены и конвертирует координаты поля на пользовательском интерфейса в игровые координаты, понятные алгоритмам. \texttt{GameProcessor} "--- аннотированный \texttt{@SessionScope} Spring-компонент, управляющий всем жизненным циклом партии: запуск (\texttt{startNewGame}), выполнение ходов (\texttt{makeMove}, \texttt{makeComputerMove}), сбор образцов для обучения весов и получение подсказок от всех четырёх алгоритмов в случае запроса таковых от пользователя приложения. \texttt{BoardAnalyzer} формирует текстовые пояснения к ходам ИИ. \texttt{TournamentService} позволяет запускать автоматические серии партий для турнира и сравнения алгоритмов. \texttt{SelfPlayTrainingService} отвечает за обучение весов параметров функции оценки: проводит партии между алгоритмами, собирает объекты \texttt{EvaluationLearningSample}, передаёт их в \texttt{EvaluationWeightsStore} и возвращает результат обучения в виде объекта \texttt{SelfPlayTrainingResult}.
+\textit{Сервисный слой} включает несколько компонентов. \texttt{BoardFactory} создаёт начальное состояние доски заданного размера. Класс \texttt{GameRules} проверяет корректность установки стены и конвертирует координаты поля на пользовательском интерфейса в игровые координаты, понятные алгоритмам. \texttt{GameProcessor} "--- аннотированный \texttt{@SessionScope} Spring-компонент, управляющий всем жизненным циклом партии: запуск (\texttt{startNewGame}), выполнение ходов (\texttt{makeMove}, \texttt{makeComputerMove}), сбор образцов для обучения весов и получение подсказок от всех четырёх алгоритмов в случае запроса таковых от пользователя приложения. \texttt{BoardAnalyzer} формирует текстовые пояснения к ходам ИИ. Класс \texttt{TournamentService} позволяет запускать автоматические серии партий для турнира и сравнения алгоритмов. \texttt{SelfPlayTrainingService} отвечает за обучение весов параметров функции оценки: проводит партии между алгоритмами, собирает объекты \texttt{EvaluationLearningSample}, передаёт их в отдельный класс \texttt{EvaluationWeightsStore} и возвращает результат обучения в виде объекта класса \texttt{SelfPlayTrainingResult}.
 
 \textit{Интерфейсный слой} реализован через библиотечные компоненты Vaadin. \texttt{StartPageController} отображает стартовый экран с выбором режима и параметров. \texttt{GamePageController} реализует основной экран игры: отрисовку игровой доски в виде сетки, историю ходов (\texttt{GameHistoryPanel}), кнопки управления. \texttt{TournamentPageController}, \texttt{AlgorithmComparisonPageController} и \texttt{SelfPlayTrainingPageController} реализуют отображение режимов турнира, сравнения алгоритмов и обучения весов функции оценки.
 
