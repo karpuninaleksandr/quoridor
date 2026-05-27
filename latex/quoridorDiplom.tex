@@ -1111,9 +1111,67 @@ AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} 
 
 Отдельный эксперимент с весами функции оценки используется не как окончательное доказательство превосходства обученной версии, а как проверка того, что механизм коррекции не ухудшает поведение алгоритма в одинаковых условиях. Один и тот же алгоритм запускается против своей копии, причем одна копия использует начальные вручную заданные веса \texttt{EvaluationWeights.defaults()}, а другая "--- веса, полученные после self-play обучения и сохранённые в \texttt{evaluation-weights.properties}.
 
-Играется 50 партий на поле $11 \times 11$ с одинаковым уровнем сложности \texttt{HARD} для обеих вариаций алгоритма, роли первого и второго игрока чередуются.
+Играется 50 партий на поле $11 \times 11$ с одинаковым уровнем сложности \texttt{HARD} для обеих вариаций алгоритма, роли первого и второго игрока чередуются. Результат сравнения и вычислительный контекст эксперимента показаны на рис.~\ref{fig:weights_ablation}.
 
-По результатам эксперимента версия AlphaBeta с обновлёнными весами выиграла 27 партии против 19 побед версии с начальными весами, а ещё 4 партии завершились по лимиту ходов.
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[
+        scale=0.95,
+        transform shape,
+        box/.style={
+            rectangle,
+            rounded corners,
+            draw=black!35,
+            fill=gray!5,
+            minimum height=4.6cm
+        },
+        title/.style={font=\bfseries},
+        label/.style={font=\small},
+        value/.style={font=\small\bfseries}
+    ]
+        \node[box, minimum width=6.5cm] at (-3.6, 0) {};
+        \node[box, minimum width=6.5cm] at (3.6, 0) {};
+
+        \node[title] at (-3.6, 1.95) {Результат партий};
+        \node[title] at (3.6, 1.95) {Вычислительный контекст};
+
+        \node[label, anchor=west] at (-6.35, 1.15) {Начальные веса};
+        \node[value, anchor=east] at (-0.90, 1.15) {19 побед};
+        \draw[black!15] (-6.35, 0.92) -- (-0.90, 0.92);
+
+        \node[label, anchor=west] at (-6.35, 0.35) {Обновлённые веса};
+        \node[value, anchor=east] at (-0.90, 0.35) {27 побед};
+        \draw[black!15] (-6.35, 0.12) -- (-0.90, 0.12);
+
+        \node[label, anchor=west] at (-6.35, -0.45) {Лимит ходов};
+        \node[value, anchor=east] at (-0.90, -0.45) {4 партии};
+        \draw[black!15] (-6.35, -0.68) -- (-0.90, -0.68);
+
+        \node[label, anchor=west] at (-6.35, -1.25) {Всего};
+        \node[value, anchor=east] at (-0.90, -1.25) {50 партий};
+
+        \node[label, anchor=west] at (0.7, 1.25) {Длина партии};
+        \node[value, anchor=east] at (6.25, 1.25) {117,84 хода};
+        \draw[black!15] (0.7, 1.05) -- (6.25, 1.05);
+
+        \node[label, anchor=west] at (0.7, 0.55) {Время хода};
+        \node[value, anchor=east] at (6.25, 0.55) {2903,7 мс};
+        \draw[black!15] (0.7, 0.35) -- (6.25, 0.35);
+
+        \node[label, anchor=west] at (0.7, -0.15) {Глубина поиска};
+        \node[value, anchor=east] at (6.25, -0.15) {6,66};
+        \draw[black!15] (0.7, -0.35) -- (6.25, -0.35);
+
+        \node[label, anchor=west] at (0.7, -0.85) {Состояния};
+        \node[value, anchor=east] at (6.25, -0.85) {5213,9};
+        \draw[black!15] (0.7, -1.05) -- (6.25, -1.05);
+
+        \node[label, anchor=west] at (0.7, -1.55) {Отсечения};
+        \node[value, anchor=east] at (6.25, -1.55) {1046,5};
+    \end{tikzpicture}
+    \caption{Сравнение начальных и обновлённых весов функции оценки}
+    \label{fig:weights_ablation}
+\end{figure}
 
 \section{Анализ результатов}
 
