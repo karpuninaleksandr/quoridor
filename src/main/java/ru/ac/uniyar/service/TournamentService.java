@@ -195,7 +195,8 @@ public class TournamentService {
         int wins2 = 0;
         int draws = 0;
         int totalMoves = 0;
-        ComparisonMetrics metrics = new ComparisonMetrics();
+        ComparisonMetrics metrics1 = new ComparisonMetrics();
+        ComparisonMetrics metrics2 = new ComparisonMetrics();
         int totalComparisonGames = totalPairs * games;
         int completedBeforePair = (pairNumber - 1) * games;
 
@@ -209,7 +210,7 @@ public class TournamentService {
                     + ": начинает P" + (i % 2 == 0 ? 1 : 2)
                     + ", после нее останется партий сравнения: " + gamesLeftAfterCurrent);
             Game game = createGame(algorithm1, algorithm2, hardness1, hardness2, gameSize, i % 2 == 0 ? 1 : 2);
-            int winner = play(game, 300, logger, gameNumber, games, games - gameNumber, metrics);
+            int winner = play(game, 300, logger, gameNumber, games, games - gameNumber, metrics1, metrics2);
             totalMoves += game.getAmountOfMoves();
             if (winner == 1) {
                 wins1++;
@@ -236,11 +237,18 @@ public class TournamentService {
                 wins2,
                 draws,
                 games == 0 ? 0 : totalMoves * 1.0 / games,
-                metrics.averageTimeMs(),
-                metrics.averageDepth(),
-                metrics.averageNodes(),
-                metrics.averageCutoffs(),
-                metrics.averageTableHits()
+                metrics1.reports(),
+                metrics1.averageTimeMs(),
+                metrics1.averageDepth(),
+                metrics1.averageNodes(),
+                metrics1.averageCutoffs(),
+                metrics1.averageTableHits(),
+                metrics2.reports(),
+                metrics2.averageTimeMs(),
+                metrics2.averageDepth(),
+                metrics2.averageNodes(),
+                metrics2.averageCutoffs(),
+                metrics2.averageTableHits()
         );
     }
 
@@ -288,6 +296,11 @@ public class TournamentService {
 
     private int play(Game game, int moveLimit, Consumer<String> logger, int gameNumber, int totalGames,
                      int gamesLeftAfterCurrent, ComparisonMetrics metrics) {
+        return play(game, moveLimit, logger, gameNumber, totalGames, gamesLeftAfterCurrent, metrics, metrics);
+    }
+
+    private int play(Game game, int moveLimit, Consumer<String> logger, int gameNumber, int totalGames,
+                     int gamesLeftAfterCurrent, ComparisonMetrics metrics1, ComparisonMetrics metrics2) {
         Map<Integer, List<Position>> recentPositions = new java.util.HashMap<>();
         recentPositions.put(1, new ArrayList<>(List.of(game.getBoard().getPositionOfPlayer1())));
         recentPositions.put(2, new ArrayList<>(List.of(game.getBoard().getPositionOfPlayer2())));
@@ -311,8 +324,11 @@ public class TournamentService {
                 return 0;
             }
             AlgorithmReport report = ((ComputerPlayer) player).getLastReport();
-            if (metrics != null) {
-                metrics.add(report);
+            if (metrics1 != null && player.getPlayerId() == 1) {
+                metrics1.add(report);
+            }
+            if (metrics2 != null && player.getPlayerId() == 2) {
+                metrics2.add(report);
             }
             game.applyMove(move);
             if (move.getMoveType() == MoveType.MOVE_PLAYER) {
@@ -408,6 +424,10 @@ public class TournamentService {
             totalNodes += report.nodesVisited();
             totalCutoffs += report.cutoffs();
             totalTableHits += report.tableHits();
+        }
+
+        long reports() {
+            return reports;
         }
 
         double averageTimeMs() {

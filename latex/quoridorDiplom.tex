@@ -65,8 +65,8 @@
 
 \chapter*{Реферат}
 
-Объем \total{page} с., \total{chapternum} гл., 16 рис.,
-12 табл., \total{bibnum} источников, \total{appnum} прил.
+Объем \total{page} с., \total{chapternum} гл., 19 рис.,
+16 табл., \total{bibnum} источников, \total{appnum} прил.
 
 \medskip
 
@@ -119,7 +119,7 @@
 
 Пример игрового поля из разработанного приложения приведён на рис.~\ref{fig:game_board}. На нём показаны клетки поля, фишки игроков и уже установленные стены.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.55\textwidth]{game-board.png}
     \caption{Игровое поле приложения <<Коридор>>}
@@ -239,7 +239,7 @@
 \]
 где $4$ соответствует возможным перемещениям фишки. На практике число ходов меньше из-за занятых клеток, уже установленных стен и правил достижимости целевых линий, однако зависимость от размера поля остаётся квадратичной. При увеличении глубины поиска число просматриваемых узлов растёт уже как $b(n)^d$, где $d$ "--- глубина дерева в полуходах.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Оценка роста игрового дерева при изменении размера поля}
 \label{tab:tree_complexity_by_size}
@@ -404,7 +404,7 @@ $11 \times 11$ & 200 & 204 & $1{,}73 \cdot 10^9$  & $7{,}21 \cdot 10^{13}$ \\
     \label{fig:evaluation_scheme}
 \end{figure}
 
-\begin{table}[h]
+\begin{table}[H]
     \centering
     \caption{Параметры оценочной функции}
     \label{tab:features}
@@ -485,7 +485,7 @@ e(d) = \begin{cases}
 
 Числовое сравнение этих вариантов приведено в таблице~\ref{tab:evaluation_example}. Второй ход получает большую оценку, потому что сильнее увеличивает разницу между кратчайшими путями игроков, несмотря на расход одной стены.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Пример сравнения двух ходов с помощью функции оценки}
 \label{tab:evaluation_example}
@@ -845,7 +845,7 @@ $m^* \leftarrow$ первый допустимый ход\;
 
 Если позиция признана <<острой>>, алгоритм выполняет небольшое дополнительное расширение дерева: рассматривает немедленные победные ходы и до восьми наиболее ценных установок стен, которые сильнее всего увеличивают путь соперника до цели. После этого для оставшихся <<спокойных>> позиций снова используется обычная функция оценки.
 
-\begin{table}[h]
+\begin{table}[H]
     \centering
     \caption{Параметры альфа-бета алгоритма для поля $9\times9$}
     \label{tab:ab_params}
@@ -936,7 +936,7 @@ h(v) = 0{,}15 \cdot \tanh(F(s_v) / 500).
 
 После истечения лимита времени или итераций алгоритма выбирается ход с наибольшим значением $n_c + w_c / n_c$ среди дочерних узлов корня, что отдаёт предпочтение хорошо исследованным ходам.
 
-\begin{table}[h]
+\begin{table}[H]
     \centering
     \caption{Параметры Монте-Карло для поля $9\times9$}
     \label{tab:mcts_params}
@@ -1038,7 +1038,7 @@ $r \leftarrow$ корневой узел с состоянием $s$\;
 
 \section{План эксперимента}
 
-Итоговый эксперимент проводится на большом поле $11 \times 11$, поскольку такой размер увеличивает пространство возможных ходов, делает партии длиннее и сильнее проявляет различия между стратегиями. Для всех алгоритмов устанавливается уровень сложности \texttt{HARD}. Для каждой пары алгоритмов проводится 50 партий. Так как сравниваются четыре алгоритма, всего рассматривается шесть пар, а суммарное число партий равно 300.
+Итоговый эксперимент проводится на трёх размерах поля: $7 \times 7$, $9 \times 9$ и $11 \times 11$. Для всех алгоритмов устанавливается уровень сложности \texttt{HARD}. Для каждой пары алгоритмов проводится 50 партий. Так как сравниваются четыре алгоритма, всего рассматривается шесть пар, а суммарное число партий для одного размера поля равно 300.
 
 Каждый алгоритм участвует в трёх попарных сравнениях, поэтому итоговая статистика для одного алгоритма агрегируется по 150 партиям. Роли первого и второго игрока чередуются между партиями, поэтому при 50 партиях на пару каждый алгоритм начинает одинаковое число раз.
 
@@ -1049,6 +1049,8 @@ $r \leftarrow$ корневой узел с состоянием $s$\;
 Игровое приложение запускалось на Java 17, использовалась сборка Amazon Corretto 17.0.10 для архитектуры arm64. Серии партий выполнялись в одном экземпляре приложения последовательно.
 
 \section{Таблицы результатов}
+
+\subsection{Результаты эксперимента на большом поле}
 
 Итоговая статистика представляется в двух формах. Первая форма "--- стандартная турнирная таблица. В ячейках таблицы~\ref{tab:tournament} указаны победы, поражения и партии, завершившиеся по лимиту ходов, для алгоритма в соответствующей строке.
 
@@ -1098,14 +1100,150 @@ AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} 
 \toprule
 Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
 \midrule
-Длина партии, ходов & \badcell{121,51} & \midcell{105,58} & \badcell{126,77} & \goodcell{97,84} \\
-Время хода, мс & \goodcell{1561,2} & \goodcell{1975,9} & \badcell{3879,3} & \midcell{2730,3} \\
-Глубина поиска & \badcell{20,44} & \midcell{21,41} & \goodcell{56,45} & \midcell{22,34} \\
-Состояний просмотрено & \goodcell{1081,4} & \midcell{2138,5} & \midcell{1214,8} & \badcell{2998,8} \\
-Ветвей отброшено & \midcell{150,0} & \midcell{185,5} & \midcell{157,6} & \goodcell{493,2} \\
+Длина партии, ходов & \badcell{117,30} & \goodcell{100,07} & \badcell{116,53} & \goodcell{100,83} \\
+Время хода, мс & \goodcell{1,1} & \goodcell{651,7} & \badcell{6413,8} & \midcell{2840,9} \\
+Глубина поиска & \badcell{1,00} & \midcell{3,96} & \goodcell{108,62} & \midcell{6,69} \\
+Состояний просмотрено & \goodcell{4,5} & \midcell{2411,2} & \goodcell{509,8} & \badcell{5247,6} \\
+Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{1107,3} \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection{Результаты эксперимента на малых полях}
+
+Также приведены таблицы результатов эксперимента на меньших по размеру полях.
+
+\begin{table}[H]
+\centering
+\caption{Сводная статистика качества игры на поле $7\times7$}
+\label{tab:summary_quality_7}
+\begin{tabular}{lrrrrr}
+\toprule
+Алгоритм & Партий & Победы & Поражения & Лимит & Доля побед \\
+\midrule
+Случайный  & \neutralcell{150} & \badcell{0}   & \badcell{150} & \neutralcell{0} & \badcell{0,00\%} \\
+MiniMax    & \neutralcell{150} & \goodcell{126} & \goodcell{24} & \neutralcell{0} & \goodcell{84,00\%} \\
+MonteCarlo & \neutralcell{150} & \midcell{81}   & \midcell{69} & \neutralcell{0} & \midcell{54,00\%} \\
+AlphaBeta  & \neutralcell{150} & \midcell{93}   & \midcell{57} & \neutralcell{0} & \midcell{62,00\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Сводная статистика вычислительных показателей на поле $7\times7$}
+\label{tab:summary_cost_7}
+\begin{tabular}{lrrrr}
+\toprule
+Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
+\midrule
+Длина партии, ходов & \badcell{71,23} & \goodcell{47,83} & \midcell{62,13} & \midcell{55,73} \\
+Время хода, мс & \goodcell{0,3} & \goodcell{707,2} & \badcell{4700,6} & \midcell{1858,6} \\
+Глубина поиска & \badcell{1,00} & \midcell{4,86} & \goodcell{68,57} & \midcell{7,63} \\
+Состояний просмотрено & \goodcell{3,9} & \midcell{7532,1} & \goodcell{785,3} & \badcell{10430,4} \\
+Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{2206,2} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Сводная статистика качества игры на поле $9\times9$}
+\label{tab:summary_quality_9}
+\begin{tabular}{lrrrrr}
+\toprule
+Алгоритм & Партий & Победы & Поражения & Лимит & Доля побед \\
+\midrule
+Случайный  & \neutralcell{150} & \badcell{0}   & \badcell{148} & \midcell{2} & \badcell{0,00\%} \\
+MiniMax    & \neutralcell{150} & \midcell{97}  & \midcell{52}  & \goodcell{1} & \midcell{64,67\%} \\
+MonteCarlo & \neutralcell{150} & \goodcell{107} & \goodcell{43} & \neutralcell{0} & \goodcell{71,33\%} \\
+AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & \midcell{62,67\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Сводная статистика вычислительных показателей на поле $9\times9$}
+\label{tab:summary_cost_9}
+\begin{tabular}{lrrrr}
+\toprule
+Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
+\midrule
+Длина партии, ходов & \badcell{105,57} & \goodcell{81,33} & \midcell{96,57} & \goodcell{76,67} \\
+Время хода, мс & \goodcell{0,6} & \goodcell{838,8} & \badcell{4945,2} & \midcell{2433,6} \\
+Глубина поиска & \badcell{1,00} & \midcell{4,88} & \goodcell{88,76} & \midcell{7,51} \\
+Состояний просмотрено & \goodcell{4,1} & \midcell{5328,2} & \goodcell{600,6} & \badcell{7881,7} \\
+Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{1644,0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Зависимость вычислительной стоимости от размера поля}
+
+На рис.~\ref{fig:time_by_size} и \ref{fig:nodes_by_size} показаны зависимости времени выбора хода, количества посещенных узлов дерева и отсечений его ветвей от размера выбранного игрового поля. Для каждого графика используются агрегированные средние значения по 150 партиям с участием соответствующего алгоритма.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=1.45cm,y=0.0006cm]
+    \draw[->] (0,0) -- (4.6,0) node[right] {Размер поля};
+    \draw[->] (0,0) -- (0,7000) node[above] {мс};
+    \foreach \x/\label in {0/7,2/9,4/11} {
+        \draw (\x,0) -- (\x,-80) node[below] {$\label\times\label$};
+    }
+    \foreach \y/\label in {0/0,1500/1500,3000/3000,4500/4500,6000/6000} {
+        \draw (0,\y) -- (-0.08,\y) node[left] {\label};
+        \draw[black!10] (0,\y) -- (4.4,\y);
+    }
+    \draw[blue, thick] plot coordinates {(0,0.3) (2,0.6) (4,1.1)};
+    \draw[black, thick] plot coordinates {(0,707.2) (2,838.8) (4,651.7)};
+    \draw[ForestGreen, thick] plot coordinates {(0,4700.6) (2,4945.2) (4,6413.8)};
+    \draw[red, thick] plot coordinates {(0,1858.6) (2,2433.6) (4,2840.9)};
+    \foreach \x/\y in {0/0.3,2/0.6,4/1.1} \fill[blue] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/707.2,2/838.8,4/651.7} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/4700.6,2/4945.2,4/6413.8} \fill[ForestGreen] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/1858.6,2/2433.6,4/2840.9} \fill[red] (\x,\y) circle (2pt);
+    \node[anchor=west, font=\small] at (4.75,6200) {\textcolor{blue}{Random}};
+    \node[anchor=west, font=\small] at (4.75,5600) {MiniMax};
+    \node[anchor=west, font=\small] at (4.75,5000) {\textcolor{ForestGreen}{MonteCarlo}};
+    \node[anchor=west, font=\small] at (4.75,4400) {\textcolor{red}{AlphaBeta}};
+\end{tikzpicture}
+\caption{Среднее время выбора хода при изменении размера поля}
+\label{fig:time_by_size}
+\end{figure}
+
+MonteCarlo тратит больше всего времени на ход из-за большого числа симуляций.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=1.45cm,y=0.00038cm]
+    \draw[->] (0,0) -- (4.6,0) node[right] {Размер поля};
+    \draw[->] (0,0) -- (0,11000) node[above] {состояний};
+    \foreach \x/\label in {0/7,2/9,4/11} {
+        \draw (\x,0) -- (\x,-120) node[below] {$\label\times\label$};
+    }
+    \foreach \y/\label in {0/0,2500/2500,5000/5000,7500/7500,10000/10000} {
+        \draw (0,\y) -- (-0.08,\y) node[left] {\label};
+        \draw[black!10] (0,\y) -- (4.4,\y);
+    }
+    \draw[blue, thick] plot coordinates {(0,3.9) (2,4.1) (4,4.5)};
+    \draw[black, thick] plot coordinates {(0,7532.1) (2,5328.2) (4,2411.2)};
+    \draw[ForestGreen, thick] plot coordinates {(0,785.3) (2,600.6) (4,509.8)};
+    \draw[red, thick] plot coordinates {(0,10430.4) (2,7881.7) (4,5247.6)};
+    \foreach \x/\y in {0/3.9,2/4.1,4/4.5} \fill[blue] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/7532.1,2/5328.2,4/2411.2} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/785.3,2/600.6,4/509.8} \fill[ForestGreen] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/10430.4,2/7881.7,4/5247.6} \fill[red] (\x,\y) circle (2pt);
+    \node[anchor=west, font=\small] at (4.75,10000) {\textcolor{blue}{Random}};
+    \node[anchor=west, font=\small] at (4.75,9000) {MiniMax};
+    \node[anchor=west, font=\small] at (4.75,8000) {\textcolor{ForestGreen}{MonteCarlo}};
+    \node[anchor=west, font=\small] at (4.75,7000) {\textcolor{red}{AlphaBeta}};
+\end{tikzpicture}
+\caption{Среднее число просмотренных состояний при изменении размера поля}
+\label{fig:nodes_by_size}
+\end{figure}
+
+Для случайного алгоритма время хода и число просмотренных состояний остаются минимальными, поскольку он не строит полноценное дерево игры. Алгоритмы MiniMax и AlphaBeta просматривают значительно больше состояний на малых и средних полях, потому что за отведённое время успевают глубже раскрыть дерево вариантов, ведь с увеличением размеров игрового поля растет <<стоимость>> рассмотрения игровой позиции.
 
 \section{Сравнение весов функции оценки}
 
@@ -1113,7 +1251,7 @@ AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} 
 
 Играется 50 партий на поле $11 \times 11$ с одинаковым уровнем сложности \texttt{HARD} для обеих вариаций алгоритма, роли первого и второго игрока чередуются. Результат сравнения и вычислительный контекст эксперимента показаны на рис.~\ref{fig:weights_ablation}.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \begin{tikzpicture}[
         scale=0.95,
@@ -1175,7 +1313,7 @@ AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} 
 
 \section{Анализ результатов}
 
-По итогам проведенного эксперимента наибольшую долю побед показал \texttt{AlphaBetaAlgorithm}: 121 победа из 150 партий, что соответствует $80{,}67\%$ побед. Алгоритм уверенно выиграл все три попарных сравнения. При этом среднее время хода AlphaBeta меньше, чем у MonteCarlo, но на ход тратится больше, чем у MiniMax и случайного алгоритма.
+По итогам основного эксперимента на поле $11 \times 11$ наибольшую долю побед показал \texttt{AlphaBetaAlgorithm}: 121 победа из 150 партий, что соответствует $80{,}67\%$ побед. Алгоритм уверенно выиграл все три попарных сравнения. При этом среднее время хода AlphaBeta меньше, чем у MonteCarlo, но на ход тратится больше, чем у MiniMax и случайного алгоритма.
 
 MiniMax и MonteCarlo показали близкие результаты по доле побед: $56{,}00\%$ и $58{,}67\%$ соответственно. В прямом сравнении MiniMax выиграл 26 партий, в то время как MonteCarlo "--- 23, одна партия завершилась по лимиту ходов. Это показывает, что статистически их игровая сила в выбранных условиях близка, однако MonteCarlo требует заметно большего времени на ход.
 
