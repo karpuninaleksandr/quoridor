@@ -1203,7 +1203,7 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[x=1.45cm,y=0.0006cm]
+\begin{tikzpicture}[x=1.75cm,y=0.00075cm]
     \draw[->] (0,0) -- (4.6,0) node[right] {Размер поля};
     \draw[->] (0,0) -- (0,7000) node[above] {мс};
     \foreach \x/\label in {0/7,2/9,4/11} {
@@ -1211,7 +1211,7 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
     }
     \foreach \y/\label in {0/0,1500/1500,3000/3000,4500/4500,6000/6000} {
         \draw (0,\y) -- (-0.08,\y) node[left] {\label};
-        \draw[black!10] (0,\y) -- (4.4,\y);
+        \draw[black!10] (0,\y) -- (4.2,\y);
     }
     \draw[blue, thick] plot coordinates {(0,0.4) (2,0.6) (4,1.0)};
     \draw[black, thick] plot coordinates {(0,737.6) (2,838.8) (4,578.5)};
@@ -1221,10 +1221,10 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
     \foreach \x/\y in {0/737.6,2/838.8,4/578.5} \fill[black] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/4807.6,2/4945.2,4/6576.2} \fill[ForestGreen] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/2274.3,2/2433.6,4/2743.9} \fill[red] (\x,\y) circle (2pt);
-    \node[anchor=west, font=\small] at (4.75,6200) {\textcolor{blue}{Random}};
-    \node[anchor=west, font=\small] at (4.75,5600) {MiniMax};
-    \node[anchor=west, font=\small] at (4.75,5000) {\textcolor{ForestGreen}{MonteCarlo}};
-    \node[anchor=west, font=\small] at (4.75,4400) {\textcolor{red}{AlphaBeta}};
+    \node[anchor=west, font=\small] at (4.45,6200) {\textcolor{blue}{Random}};
+    \node[anchor=west, font=\small] at (4.45,5600) {MiniMax};
+    \node[anchor=west, font=\small] at (4.45,5000) {\textcolor{ForestGreen}{MonteCarlo}};
+    \node[anchor=west, font=\small] at (4.45,4400) {\textcolor{red}{AlphaBeta}};
 \end{tikzpicture}
 \caption{Среднее время выбора хода при изменении размера поля}
 \label{fig:time_by_size}
@@ -1234,7 +1234,7 @@ MonteCarlo тратит больше всего времени на ход из-
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[x=1.45cm,y=0.00030cm]
+\begin{tikzpicture}[x=1.75cm,y=0.00036cm]
     \draw[->] (0,0) -- (4.6,0) node[right] {Размер поля};
     \draw[->] (0,0) -- (0,14500) node[above] {состояний};
     \foreach \x/\label in {0/7,2/9,4/11} {
@@ -1242,7 +1242,7 @@ MonteCarlo тратит больше всего времени на ход из-
     }
     \foreach \y/\label in {0/0,3500/3500,7000/7000,10500/10500,14000/14000} {
         \draw (0,\y) -- (-0.08,\y) node[left] {\label};
-        \draw[black!10] (0,\y) -- (4.4,\y);
+        \draw[black!10] (0,\y) -- (4.2,\y);
     }
     \draw[blue, thick] plot coordinates {(0,4.4) (2,4.1) (4,4.4)};
     \draw[black, thick] plot coordinates {(0,8288.4) (2,5328.2) (4,2158.1)};
@@ -1252,10 +1252,10 @@ MonteCarlo тратит больше всего времени на ход из-
     \foreach \x/\y in {0/8288.4,2/5328.2,4/2158.1} \fill[black] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/797.7,2/600.6,4/444.7} \fill[ForestGreen] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/13210.3,2/7881.7,4/5405.1} \fill[red] (\x,\y) circle (2pt);
-    \node[anchor=west, font=\small] at (4.75,13200) {\textcolor{blue}{Random}};
-    \node[anchor=west, font=\small] at (4.75,11900) {MiniMax};
-    \node[anchor=west, font=\small] at (4.75,10600) {\textcolor{ForestGreen}{MonteCarlo}};
-    \node[anchor=west, font=\small] at (4.75,9300) {\textcolor{red}{AlphaBeta}};
+    \node[anchor=west, font=\small] at (4.45,13200) {\textcolor{blue}{Random}};
+    \node[anchor=west, font=\small] at (4.45,11900) {MiniMax};
+    \node[anchor=west, font=\small] at (4.45,10600) {\textcolor{ForestGreen}{MonteCarlo}};
+    \node[anchor=west, font=\small] at (4.45,9300) {\textcolor{red}{AlphaBeta}};
 \end{tikzpicture}
 \caption{Среднее число просмотренных состояний при изменении размера поля}
 \label{fig:nodes_by_size}
