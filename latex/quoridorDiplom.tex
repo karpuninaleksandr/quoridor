@@ -240,19 +240,33 @@
 где $4$ соответствует возможным перемещениям фишки. На практике число ходов меньше из-за занятых клеток, уже установленных стен и правил достижимости целевых линий, однако зависимость от размера поля остаётся квадратичной. При увеличении глубины поиска число просматриваемых узлов растёт уже как $b(n)^d$, где $d$ "--- глубина дерева в полуходах.
 
 \begin{table}[H]
-\centering
-\caption{Оценка роста игрового дерева при изменении размера поля}
-\label{tab:tree_complexity_by_size}
-\begin{tabular}{lrrrr}
-\toprule
-Поле & Позиций стен & Оценка $b(n)$ & Узлов при $d=4$ & Узлов при $d=6$ \\
-\midrule
-$7 \times 7$   & 72  & 76  & $3{,}34 \cdot 10^7$  & $1{,}93 \cdot 10^{11}$ \\
-$9 \times 9$   & 128 & 132 & $3{,}04 \cdot 10^8$  & $5{,}29 \cdot 10^{12}$ \\
-$11 \times 11$ & 200 & 204 & $1{,}73 \cdot 10^9$  & $7{,}21 \cdot 10^{13}$ \\
-\bottomrule
-\end{tabular}
+    \centering
+    \caption{Оценка роста игрового дерева при изменении размера поля}
+    \label{tab:tree_complexity_by_size}
+    \begin{tabular}{lrrrr}
+        \toprule
+        Поле & Позиций стен & Оценка $b(n)$ & Узлов при $d=4$ & Узлов при $d=6$ \\
+        \midrule
+        $7 \times 7$   & 72  & 76  & $3{,}34 \cdot 10^7$  & $1{,}93 \cdot 10^{11}$ \\
+        $9 \times 9$   & 128 & 132 & $3{,}04 \cdot 10^8$  & $5{,}29 \cdot 10^{12}$ \\
+        $11 \times 11$ & 200 & 204 & $1{,}73 \cdot 10^9$  & $7{,}21 \cdot 10^{13}$ \\
+        \bottomrule
+    \end{tabular}
 \end{table}
+
+
+Для полного дерева игры $d$ соответствует не глубине просмотра одного хода, а длине партии до терминального состояния. При увеличении поля растёт не только коэффициент ветвления $b(n)$, но и потенциальная глубина полного дерева $d(n)$. В результате сложность полного перебора можно оценивать как
+\[
+    O(b(n)^{d(n)}).
+\]
+
+Глубина игрового дерева зависит от длительности партии. Минимально партия требует порядка $O(n)$ полуходов, однако наличие стен увеличивает длину маршрутов. Поскольку число стен у игроков масштабируется вместе с размером поля, практическую верхнюю оценку глубины партии можно рассматривать как $O(n^2)$. Тогда общая оценка сложности дерева равна
+
+\[
+T(n) = O(b(n)^{d(n)}) = O((n^2)^{n^2}).
+\]
+
+Для стандартного поля $9 \times 9$ приводится оценка сложности дерева игры порядка $10^{162}$ \cite{Respall:2018}. Именно поэтому реализованные алгоритмы используют ограничение глубины, временной лимит, сортировку ходов и эвристическую функцию оценки позиции, чтобы не заниматься полным перебором всего игрового дерева.
 
 \chapter{Алгоритмы}
 
@@ -672,11 +686,11 @@ $M \leftarrow$ \texttt{getMoves}$(s)$\;
 
 \begin{table}[H]
     \centering
-    \caption{Параметры минимакса}
+    \caption{Параметры минимакса (поле $9\times9$)}
     \label{tab:minimax_params}
     \begin{tabular}{lcc}
         \toprule
-        Уровень & $d_{\max}$ (поле $9\times9$) & $T$, мс (поле $9\times9$) \\
+        Уровень & $d_{\max}$ & $T$, мс \\
         \midrule
         \texttt{EASY}   & 3 & 700  \\
         \texttt{MEDIUM} & 4 & 1800 \\
@@ -685,7 +699,7 @@ $M \leftarrow$ \texttt{getMoves}$(s)$\;
     \end{tabular}
 \end{table}
 
-Чтобы алгоритм успевал обрабатывать большие значения глубины поиска за отведенное время, было введено ограничение на количество ходов для перебора на каждой итерации. После получения всего множества возможных вариантов хода из текущей позиции, эти ходы сортируются с помощью функции оценки, а затем уже отсортированный список обрезается первыми 16 вхождениями в него. Уже обработанные алгоритмом позиции и их оценки храняется в таблице \texttt{cache}. Общая схема работы алгоритма приведена в алгоритме~\ref{alg:minimax}.
+После получения всего множества возможных вариантов хода из текущей позиции они сортируются с помощью функции оценки. Уже обработанные алгоритмом позиции и их оценки храняется в таблице \texttt{cache}. Общая схема работы алгоритма приведена в алгоритме~\ref{alg:minimax}.
 
 \begin{algorithm}[H]
 \caption{Минимакс с итеративным углублением}\label{alg:minimax}
@@ -704,7 +718,7 @@ $M \leftarrow$ \texttt{getMoves}$(s)$\;
         \KwRet{\FEval{$s$}}\;
     }
     $p \leftarrow$ игрок, которому принадлежит ход в узле $s$\;
-    $M \leftarrow$ лучшие 16 ходов из \texttt{getMoves}$(s, p)$\;
+    $M \leftarrow$ \texttt{getMoves}$(s, p)$\;
     \eIf{$isMax$}{
         $best \leftarrow -\infty$\;
         \ForEach{$m \in M$}{
@@ -835,8 +849,6 @@ $m^* \leftarrow$ первый допустимый ход\;
 
 Таблица \texttt{goodMoves} решает похожую задачу, но хранит не два последних хода для конкретной глубины, а накопленную статистику по строковому представлению ходов. Каждый раз, когда ход приводит к отсечению, его счётчик увеличивается. При следующих сортировках ход с наибольшим числом успешных отсечений получает небольшой дополнительный вес.
 
-После сортировки список ходов обрезается до 36 кандидатов, по аналогии с алгоритмом Минимакс.
-
 \subsection*{Поиск стабильной терминальной позиции}
 
 Обычный поиск с ограничением глубины имеет одну важную проблему: он может остановиться в момент, когда позиция ещё не является стабильной. Например, алгоритм дошёл до предельной глубины и видит, что путь до цели стал короче, но не успел проверить, что соперник следующим ходом тоже может выйти на целевую линию или поставить решающую стену. В такой ситуации простая статическая оценка не может гарантировать победу алгоритма.
@@ -875,7 +887,7 @@ $m^* \leftarrow$ первый допустимый ход\;
             \KwRet{$F(s)$}
         }
     }
-    $M \leftarrow$ лучшие 36 ходов из \texttt{getMoves}$(s)$\;
+    $M \leftarrow$  \texttt{getMoves}$(s)$\;
     $\mathrm{best} \leftarrow -\infty$ если isMax, иначе $+\infty$\;
     \ForEach{$m \in M$}{
         $v \leftarrow$ \FAB{$\mathrm{apply}(s, m)$, $d-1$, $\alpha$, $\beta$, $\neg$isMax}\;
@@ -985,10 +997,10 @@ $r \leftarrow$ корневой узел с состоянием $s$\;
         Random & \texttt{EASY} & Случайный выбор среди всех допустимых ходов \\
         Random & \texttt{MEDIUM} & Случайный выбор из верхней половины ходов по функции оценки \\
         Random & \texttt{HARD} & Случайный выбор из трёх лучших ходов по функции оценки \\
-        MiniMax & \texttt{EASY} & Глубина 3, лимит 700 мс, ширина перебора до 16 ходов \\
-        MiniMax & \texttt{MEDIUM} & Глубина 4, лимит 1800 мс, ширина перебора до 16 ходов \\
-        MiniMax & \texttt{HARD} & Глубина 5, лимит 3600 мс, ширина перебора до 16 ходов \\
-        AlphaBeta & \texttt{EASY} & Глубина 4, лимит 1300 мс, сортировка ходов, до 36 кандидатов \\
+        MiniMax & \texttt{EASY} & Глубина 3, лимит 700 мс \\
+        MiniMax & \texttt{MEDIUM} & Глубина 4, лимит 1800 мс \\
+        MiniMax & \texttt{HARD} & Глубина 5, лимит 3600 мс \\
+        AlphaBeta & \texttt{EASY} & Глубина 4, лимит 1300 мс, сортировка ходов \\
         AlphaBeta & \texttt{MEDIUM} & Глубина 6, лимит 3600 мс, приоритет ходов, ранее приводивших к отсечениям \\
         AlphaBeta & \texttt{HARD} & Глубина 8, лимит 7600 мс, поиск стабильности позиции в острых состояниях \\
         MCTS & \texttt{EASY} & До 520 итераций, лимит 950 мс, глубина rollout $9\cdot4=36$ \\
@@ -1100,11 +1112,11 @@ AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} 
 \toprule
 Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
 \midrule
-Длина партии, ходов & \badcell{117,30} & \goodcell{100,07} & \badcell{116,53} & \goodcell{100,83} \\
-Время хода, мс & \goodcell{1,1} & \goodcell{651,7} & \badcell{6413,8} & \midcell{2840,9} \\
-Глубина поиска & \badcell{1,00} & \midcell{3,96} & \goodcell{108,62} & \midcell{6,69} \\
-Состояний просмотрено & \goodcell{4,5} & \midcell{2411,2} & \goodcell{509,8} & \badcell{5247,6} \\
-Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{1107,3} \\
+Длина партии, ходов & \midcell{114,87} & \midcell{111,43} & \badcell{120,27} & \goodcell{97,17} \\
+Время хода, мс & \goodcell{1,0} & \goodcell{578,5} & \badcell{6576,2} & \midcell{2743,9} \\
+Глубина поиска & \badcell{1,00} & \midcell{3,96} & \goodcell{108,60} & \midcell{6,71} \\
+Состояний просмотрено & \goodcell{4,4} & \midcell{2158,1} & \goodcell{444,7} & \badcell{5405,1} \\
+Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{1140,3} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1137,11 +1149,11 @@ AlphaBeta  & \neutralcell{150} & \midcell{93}   & \midcell{57} & \neutralcell{0}
 \toprule
 Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
 \midrule
-Длина партии, ходов & \badcell{71,23} & \goodcell{47,83} & \midcell{62,13} & \midcell{55,73} \\
-Время хода, мс & \goodcell{0,3} & \goodcell{707,2} & \badcell{4700,6} & \midcell{1858,6} \\
-Глубина поиска & \badcell{1,00} & \midcell{4,86} & \goodcell{68,57} & \midcell{7,63} \\
-Состояний просмотрено & \goodcell{3,9} & \midcell{7532,1} & \goodcell{785,3} & \badcell{10430,4} \\
-Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{2206,2} \\
+Длина партии, ходов & \badcell{58,03} & \goodcell{46,10} & \badcell{58,70} & \goodcell{45,70} \\
+Время хода, мс & \goodcell{0,4} & \goodcell{737,6} & \badcell{4807,6} & \midcell{2274,3} \\
+Глубина поиска & \badcell{0,99} & \midcell{4,81} & \goodcell{68,73} & \midcell{7,50} \\
+Состояний просмотрено & \goodcell{4,4} & \midcell{8288,4} & \goodcell{797,7} & \badcell{13210,3} \\
+Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{2785,9} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1195,14 +1207,14 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
         \draw (0,\y) -- (-0.08,\y) node[left] {\label};
         \draw[black!10] (0,\y) -- (4.4,\y);
     }
-    \draw[blue, thick] plot coordinates {(0,0.3) (2,0.6) (4,1.1)};
-    \draw[black, thick] plot coordinates {(0,707.2) (2,838.8) (4,651.7)};
-    \draw[ForestGreen, thick] plot coordinates {(0,4700.6) (2,4945.2) (4,6413.8)};
-    \draw[red, thick] plot coordinates {(0,1858.6) (2,2433.6) (4,2840.9)};
-    \foreach \x/\y in {0/0.3,2/0.6,4/1.1} \fill[blue] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/707.2,2/838.8,4/651.7} \fill[black] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/4700.6,2/4945.2,4/6413.8} \fill[ForestGreen] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/1858.6,2/2433.6,4/2840.9} \fill[red] (\x,\y) circle (2pt);
+    \draw[blue, thick] plot coordinates {(0,0.4) (2,0.6) (4,1.0)};
+    \draw[black, thick] plot coordinates {(0,737.6) (2,838.8) (4,578.5)};
+    \draw[ForestGreen, thick] plot coordinates {(0,4807.6) (2,4945.2) (4,6576.2)};
+    \draw[red, thick] plot coordinates {(0,2274.3) (2,2433.6) (4,2743.9)};
+    \foreach \x/\y in {0/0.4,2/0.6,4/1.0} \fill[blue] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/737.6,2/838.8,4/578.5} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/4807.6,2/4945.2,4/6576.2} \fill[ForestGreen] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/2274.3,2/2433.6,4/2743.9} \fill[red] (\x,\y) circle (2pt);
     \node[anchor=west, font=\small] at (4.75,6200) {\textcolor{blue}{Random}};
     \node[anchor=west, font=\small] at (4.75,5600) {MiniMax};
     \node[anchor=west, font=\small] at (4.75,5000) {\textcolor{ForestGreen}{MonteCarlo}};
@@ -1216,28 +1228,28 @@ MonteCarlo тратит больше всего времени на ход из-
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[x=1.45cm,y=0.00038cm]
+\begin{tikzpicture}[x=1.45cm,y=0.00030cm]
     \draw[->] (0,0) -- (4.6,0) node[right] {Размер поля};
-    \draw[->] (0,0) -- (0,11000) node[above] {состояний};
+    \draw[->] (0,0) -- (0,14500) node[above] {состояний};
     \foreach \x/\label in {0/7,2/9,4/11} {
         \draw (\x,0) -- (\x,-120) node[below] {$\label\times\label$};
     }
-    \foreach \y/\label in {0/0,2500/2500,5000/5000,7500/7500,10000/10000} {
+    \foreach \y/\label in {0/0,3500/3500,7000/7000,10500/10500,14000/14000} {
         \draw (0,\y) -- (-0.08,\y) node[left] {\label};
         \draw[black!10] (0,\y) -- (4.4,\y);
     }
-    \draw[blue, thick] plot coordinates {(0,3.9) (2,4.1) (4,4.5)};
-    \draw[black, thick] plot coordinates {(0,7532.1) (2,5328.2) (4,2411.2)};
-    \draw[ForestGreen, thick] plot coordinates {(0,785.3) (2,600.6) (4,509.8)};
-    \draw[red, thick] plot coordinates {(0,10430.4) (2,7881.7) (4,5247.6)};
-    \foreach \x/\y in {0/3.9,2/4.1,4/4.5} \fill[blue] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/7532.1,2/5328.2,4/2411.2} \fill[black] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/785.3,2/600.6,4/509.8} \fill[ForestGreen] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/10430.4,2/7881.7,4/5247.6} \fill[red] (\x,\y) circle (2pt);
-    \node[anchor=west, font=\small] at (4.75,10000) {\textcolor{blue}{Random}};
-    \node[anchor=west, font=\small] at (4.75,9000) {MiniMax};
-    \node[anchor=west, font=\small] at (4.75,8000) {\textcolor{ForestGreen}{MonteCarlo}};
-    \node[anchor=west, font=\small] at (4.75,7000) {\textcolor{red}{AlphaBeta}};
+    \draw[blue, thick] plot coordinates {(0,4.4) (2,4.1) (4,4.4)};
+    \draw[black, thick] plot coordinates {(0,8288.4) (2,5328.2) (4,2158.1)};
+    \draw[ForestGreen, thick] plot coordinates {(0,797.7) (2,600.6) (4,444.7)};
+    \draw[red, thick] plot coordinates {(0,13210.3) (2,7881.7) (4,5405.1)};
+    \foreach \x/\y in {0/4.4,2/4.1,4/4.4} \fill[blue] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/8288.4,2/5328.2,4/2158.1} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/797.7,2/600.6,4/444.7} \fill[ForestGreen] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/13210.3,2/7881.7,4/5405.1} \fill[red] (\x,\y) circle (2pt);
+    \node[anchor=west, font=\small] at (4.75,13200) {\textcolor{blue}{Random}};
+    \node[anchor=west, font=\small] at (4.75,11900) {MiniMax};
+    \node[anchor=west, font=\small] at (4.75,10600) {\textcolor{ForestGreen}{MonteCarlo}};
+    \node[anchor=west, font=\small] at (4.75,9300) {\textcolor{red}{AlphaBeta}};
 \end{tikzpicture}
 \caption{Среднее число просмотренных состояний при изменении размера поля}
 \label{fig:nodes_by_size}

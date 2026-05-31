@@ -170,8 +170,7 @@ public class MinimaxAlgorithm implements Algorithm {
                 }
             }
 
-            int val = minimax(copy, depth - 1, !maximizing,
-                    playerId, size, newWallsLeft1, newWallsLeft2, endTime);
+            int val = minimax(copy, depth - 1, !maximizing, playerId, size, newWallsLeft1, newWallsLeft2, endTime);
             if (maximizing) {
                 best = Math.max(best, val);
             } else {
@@ -189,10 +188,7 @@ public class MinimaxAlgorithm implements Algorithm {
                 scoreMoveForOrdering(board, b, playerId, size, wallsLeft1, wallsLeft2),
                 scoreMoveForOrdering(board, a, playerId, size, wallsLeft1, wallsLeft2)
         ));
-        if (ordered.size() <= 16) {
-            return ordered;
-        }
-        return ordered.subList(0, 16);
+        return ordered;
     }
 
     //дает ходу предварительный балл для сортировки перед глубоким поиском

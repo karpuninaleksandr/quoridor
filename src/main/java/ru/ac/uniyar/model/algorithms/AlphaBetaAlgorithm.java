@@ -116,9 +116,6 @@ public class AlphaBetaAlgorithm implements Algorithm {
         List<Move> moves = new ArrayList<>(getMoves(board, playerId, currentWalls).stream()
                 .filter(move -> isRootMoveLegal(board, move, playerId, currentWalls)).toList());
         orderMoves(moves, board, playerId, size, wallsLeft1, wallsLeft2, 0, null);
-        if (moves.size() > 36) {
-            moves = moves.subList(0, 36);
-        }
         consideredMoves += moves.size();
 
         Move bestMove = null;
