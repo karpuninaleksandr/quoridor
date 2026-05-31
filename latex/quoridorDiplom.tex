@@ -1188,11 +1188,11 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
 \toprule
 Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
 \midrule
-Длина партии, ходов & \badcell{105,57} & \goodcell{81,33} & \midcell{96,57} & \goodcell{76,67} \\
-Время хода, мс & \goodcell{0,6} & \goodcell{838,8} & \badcell{4945,2} & \midcell{2433,6} \\
-Глубина поиска & \badcell{1,00} & \midcell{4,88} & \goodcell{88,76} & \midcell{7,51} \\
-Состояний просмотрено & \goodcell{4,1} & \midcell{5328,2} & \goodcell{600,6} & \badcell{7881,7} \\
-Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{1644,0} \\
+Длина партии, ходов & \badcell{97,27} & \goodcell{73,23} & \badcell{97,37} & \badcell{96,67} \\
+Время хода, мс & \goodcell{0,7} & \goodcell{935,2} & \badcell{4991,9} & \midcell{2277,5} \\
+Глубина поиска & \badcell{1,00} & \midcell{4,87} & \goodcell{88,71} & \midcell{7,59} \\
+Состояний просмотрено & \goodcell{4,5} & \midcell{5993,4} & \goodcell{588,4} & \badcell{7327,6} \\
+Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{1510,9} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1213,14 +1213,14 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
         \draw (0,\y) -- (-0.08,\y) node[left] {\label};
         \draw[black!10] (0,\y) -- (4.2,\y);
     }
-    \draw[blue, thick] plot coordinates {(0,0.4) (2,0.6) (4,1.0)};
-    \draw[black, thick] plot coordinates {(0,737.6) (2,838.8) (4,578.5)};
-    \draw[ForestGreen, thick] plot coordinates {(0,4807.6) (2,4945.2) (4,6576.2)};
-    \draw[red, thick] plot coordinates {(0,2274.3) (2,2433.6) (4,2743.9)};
-    \foreach \x/\y in {0/0.4,2/0.6,4/1.0} \fill[blue] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/737.6,2/838.8,4/578.5} \fill[black] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/4807.6,2/4945.2,4/6576.2} \fill[ForestGreen] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/2274.3,2/2433.6,4/2743.9} \fill[red] (\x,\y) circle (2pt);
+    \draw[blue, thick] plot coordinates {(0,0.4) (2,0.7) (4,1.0)};
+    \draw[black, thick] plot coordinates {(0,737.6) (2,935.2) (4,578.5)};
+    \draw[ForestGreen, thick] plot coordinates {(0,4807.6) (2,4991.9) (4,6576.2)};
+    \draw[red, thick] plot coordinates {(0,2274.3) (2,2277.5) (4,2743.9)};
+    \foreach \x/\y in {0/0.4,2/0.7,4/1.0} \fill[blue] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/737.6,2/935.2,4/578.5} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/4807.6,2/4991.9,4/6576.2} \fill[ForestGreen] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/2274.3,2/2277.5,4/2743.9} \fill[red] (\x,\y) circle (2pt);
     \node[anchor=west, font=\small] at (4.45,6200) {\textcolor{blue}{Random}};
     \node[anchor=west, font=\small] at (4.45,5600) {MiniMax};
     \node[anchor=west, font=\small] at (4.45,5000) {\textcolor{ForestGreen}{MonteCarlo}};
@@ -1244,20 +1244,20 @@ MonteCarlo тратит больше всего времени на ход из-
         \draw (0,\y) -- (-0.08,\y) node[left] {\label};
         \draw[black!10] (0,\y) -- (4.2,\y);
     }
-    \draw[blue, thick] plot coordinates {(0,4.4) (2,4.1) (4,4.4)};
-    \draw[black, thick] plot coordinates {(0,8288.4) (2,5328.2) (4,2158.1)};
-    \draw[ForestGreen, thick] plot coordinates {(0,797.7) (2,600.6) (4,444.7)};
-    \draw[red, thick] plot coordinates {(0,13210.3) (2,7881.7) (4,5405.1)};
-    \foreach \x/\y in {0/4.4,2/4.1,4/4.4} \fill[blue] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/8288.4,2/5328.2,4/2158.1} \fill[black] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/797.7,2/600.6,4/444.7} \fill[ForestGreen] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/13210.3,2/7881.7,4/5405.1} \fill[red] (\x,\y) circle (2pt);
+    \draw[blue, thick] plot coordinates {(0,4.4) (2,4.5) (4,4.4)};
+    \draw[black, thick] plot coordinates {(0,8288.4) (2,5993.4) (4,2158.1)};
+    \draw[ForestGreen, thick] plot coordinates {(0,797.7) (2,588.4) (4,444.7)};
+    \draw[red, thick] plot coordinates {(0,13210.3) (2,7327.6) (4,5405.1)};
+    \foreach \x/\y in {0/4.4,2/4.5,4/4.4} \fill[blue] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/8288.4,2/5993.4,4/2158.1} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/797.7,2/588.4,4/444.7} \fill[ForestGreen] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/13210.3,2/7327.6,4/5405.1} \fill[red] (\x,\y) circle (2pt);
     \node[anchor=west, font=\small] at (4.45,13200) {\textcolor{blue}{Random}};
     \node[anchor=west, font=\small] at (4.45,11900) {MiniMax};
     \node[anchor=west, font=\small] at (4.45,10600) {\textcolor{ForestGreen}{MonteCarlo}};
     \node[anchor=west, font=\small] at (4.45,9300) {\textcolor{red}{AlphaBeta}};
 \end{tikzpicture}
-\caption{Среднее число просмотренных состояний при изменении размера поля}
+\caption{Среднее число просмотренных игровых позиций при изменении размера поля}
 \label{fig:nodes_by_size}
 \end{figure}
 
