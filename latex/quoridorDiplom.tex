@@ -260,7 +260,7 @@
     O(b(n)^{d(n)}).
 \]
 
-Глубина игрового дерева зависит от длительности партии. Минимально партия требует порядка $O(n)$ полуходов, однако наличие стен увеличивает длину маршрутов. Поскольку число стен у игроков масштабируется вместе с размером поля, практическую верхнюю оценку глубины партии можно рассматривать как $O(n^2)$. Тогда общая оценка сложности дерева равна
+Глубина игрового дерева зависит от длительности партии. Минимально партия требует порядка $O(n)$ полуходов, однако наличие стен увеличивает длину маршрутов. Поскольку число стен у игроков масштабируется вместе с размером поля, практическую верхнюю оценку глубины партии можно рассматривать как $O(n^2)$ (в ходе эксперимента было выяснено, что средняя длина партии для поля размером $9 \times 9$ "--- 91 ход, для поля $7 \times 7$ "--- 50, а для $11 \times 11$ - 110 ходов). Тогда общая оценка сложности дерева равна
 
 \[
 T(n) = O(b(n)^{d(n)}) = O((n^2)^{n^2}).
@@ -1119,7 +1119,7 @@ AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} 
 Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
 \midrule
 Длина партии, ходов & \midcell{114,87} & \midcell{111,43} & \badcell{120,27} & \goodcell{97,17} \\
-Время хода, мс & \goodcell{1,0} & \goodcell{578,5} & \badcell{6576,2} & \midcell{2743,9} \\
+Время хода, мс & \goodcell{1,0} & \goodcell{1578,5} & \badcell{6576,2} & \midcell{2743,9} \\
 Глубина поиска & \badcell{1,00} & \midcell{3,96} & \goodcell{108,60} & \midcell{6,71} \\
 Состояний просмотрено & \goodcell{4,4} & \midcell{2158,1} & \goodcell{444,7} & \badcell{5405,1} \\
 Ветвей отброшено & \neutralcell{0,0} & \neutralcell{0,0} & \neutralcell{0,0} & \goodcell{1140,3} \\
@@ -1199,7 +1199,36 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
 
 \subsection{Зависимость вычислительной стоимости от размера поля}
 
-На рис.~\ref{fig:time_by_size} и \ref{fig:nodes_by_size} показаны зависимости времени выбора хода, количества посещенных узлов дерева и отсечений его ветвей от размера выбранного игрового поля. Для каждого графика используются агрегированные средние значения по 150 партиям с участием соответствующего алгоритма.
+На рис.~\ref{fig:moves_by_size}, \ref{fig:time_by_size} и \ref{fig:nodes_by_size} показаны зависимости средней длины партии, времени выбора хода и количества посещенных узлов дерева от размера выбранного игрового поля. Для каждого графика используются агрегированные средние значения с участием соответствующего алгоритма.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=1.75cm,y=0.038cm]
+    \draw[->] (0,0) -- (4.6,0) node[right] {Размер поля};
+    \draw[->] (0,0) -- (0,130) node[above] {ходов};
+    \foreach \x/\label in {0/7,2/9,4/11} {
+        \draw (\x,0) -- (\x,-3) node[below] {$\label\times\label$};
+    }
+    \foreach \y/\label in {0/0,30/30,60/60,90/90,120/120} {
+        \draw (0,\y) -- (-0.08,\y) node[left] {\label};
+        \draw[black!10] (0,\y) -- (4.2,\y);
+    }
+    \draw[blue, thick] plot coordinates {(0,58.03) (2,97.27) (4,114.87)};
+    \draw[black, thick] plot coordinates {(0,46.10) (2,73.23) (4,111.43)};
+    \draw[ForestGreen, thick] plot coordinates {(0,58.70) (2,97.37) (4,120.27)};
+    \draw[red, thick] plot coordinates {(0,45.70) (2,96.67) (4,97.17)};
+    \foreach \x/\y in {0/58.03,2/97.27,4/114.87} \fill[blue] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/46.10,2/73.23,4/111.43} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/58.70,2/97.37,4/120.27} \fill[ForestGreen] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/45.70,2/96.67,4/97.17} \fill[red] (\x,\y) circle (2pt);
+    \node[anchor=west, font=\small] at (4.45,120) {\textcolor{blue}{Random}};
+    \node[anchor=west, font=\small] at (4.45,110) {MiniMax};
+    \node[anchor=west, font=\small] at (4.45,100) {\textcolor{ForestGreen}{MonteCarlo}};
+    \node[anchor=west, font=\small] at (4.45,90) {\textcolor{red}{AlphaBeta}};
+\end{tikzpicture}
+\caption{Средняя длина партии при изменении размера поля}
+\label{fig:moves_by_size}
+\end{figure}
 
 \begin{figure}[H]
 \centering
@@ -1214,11 +1243,11 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
         \draw[black!10] (0,\y) -- (4.2,\y);
     }
     \draw[blue, thick] plot coordinates {(0,0.4) (2,0.7) (4,1.0)};
-    \draw[black, thick] plot coordinates {(0,737.6) (2,935.2) (4,578.5)};
+    \draw[black, thick] plot coordinates {(0,737.6) (2,935.2) (4,1578.5)};
     \draw[ForestGreen, thick] plot coordinates {(0,4807.6) (2,4991.9) (4,6576.2)};
     \draw[red, thick] plot coordinates {(0,2274.3) (2,2277.5) (4,2743.9)};
     \foreach \x/\y in {0/0.4,2/0.7,4/1.0} \fill[blue] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/737.6,2/935.2,4/578.5} \fill[black] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/737.6,2/935.2,4/1578.5} \fill[black] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/4807.6,2/4991.9,4/6576.2} \fill[ForestGreen] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/2274.3,2/2277.5,4/2743.9} \fill[red] (\x,\y) circle (2pt);
     \node[anchor=west, font=\small] at (4.45,6200) {\textcolor{blue}{Random}};
