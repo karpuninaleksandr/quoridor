@@ -260,7 +260,7 @@
     O(b(n)^{d(n)}).
 \]
 
-Глубина игрового дерева зависит от длительности партии. Минимально партия требует порядка $O(n)$ полуходов, однако наличие стен увеличивает длину маршрутов. Поскольку число стен у игроков масштабируется вместе с размером поля, практическую верхнюю оценку глубины партии можно рассматривать как $O(n^2)$ (в ходе эксперимента было выяснено, что средняя длина партии для поля размером $9 \times 9$ "--- 91 ход, для поля $7 \times 7$ "--- 50, а для $11 \times 11$ - 110 ходов). Тогда общая оценка сложности дерева равна
+Глубина игрового дерева зависит от длительности партии. Минимально партия требует порядка $O(n)$ полуходов, однако наличие стен увеличивает длину маршрутов. Поскольку число стен у игроков масштабируется вместе с размером поля, практическую верхнюю оценку глубины партии можно рассматривать как $O(n^2)$ (в ходе эксперимента было выяснено, что средняя длина партии для поля размером $9 \times 9$ "--- 90 ходов, для поля $7 \times 7$ "--- 50, а для $11 \times 11$ - 110 ходов). Тогда общая оценка сложности дерева равна
 
 \[
 T(n) = O(b(n)^{d(n)}) = O((n^2)^{n^2}).
@@ -1118,7 +1118,7 @@ AlphaBeta  & \neutralcell{150} & \goodcell{121} & \goodcell{27}  & \goodcell{2} 
 \toprule
 Показатель & Случайный & MiniMax & MonteCarlo & AlphaBeta \\
 \midrule
-Длина партии, ходов & \midcell{114,87} & \midcell{111,43} & \badcell{120,27} & \goodcell{97,17} \\
+Длина партии, ходов & \midcell{114,87} & \midcell{111,43} & \badcell{120,27} & \goodcell{107,17} \\
 Время хода, мс & \goodcell{1,0} & \goodcell{1578,5} & \badcell{6576,2} & \midcell{2743,9} \\
 Глубина поиска & \badcell{1,00} & \midcell{3,96} & \goodcell{108,60} & \midcell{6,71} \\
 Состояний просмотрено & \goodcell{4,4} & \midcell{2158,1} & \goodcell{444,7} & \badcell{5405,1} \\
@@ -1216,11 +1216,11 @@ AlphaBeta  & \neutralcell{150} & \midcell{94}  & \midcell{55}  & \goodcell{1} & 
     \draw[blue, thick] plot coordinates {(0,58.03) (2,97.27) (4,114.87)};
     \draw[black, thick] plot coordinates {(0,46.10) (2,73.23) (4,111.43)};
     \draw[ForestGreen, thick] plot coordinates {(0,58.70) (2,97.37) (4,120.27)};
-    \draw[red, thick] plot coordinates {(0,45.70) (2,96.67) (4,97.17)};
+    \draw[red, thick] plot coordinates {(0,45.70) (2,96.67) (4,107.17)};
     \foreach \x/\y in {0/58.03,2/97.27,4/114.87} \fill[blue] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/46.10,2/73.23,4/111.43} \fill[black] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/58.70,2/97.37,4/120.27} \fill[ForestGreen] (\x,\y) circle (2pt);
-    \foreach \x/\y in {0/45.70,2/96.67,4/97.17} \fill[red] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/45.70,2/96.67,4/107.17} \fill[red] (\x,\y) circle (2pt);
     \node[anchor=west, font=\small] at (4.45,120) {\textcolor{blue}{Random}};
     \node[anchor=west, font=\small] at (4.45,110) {MiniMax};
     \node[anchor=west, font=\small] at (4.45,100) {\textcolor{ForestGreen}{MonteCarlo}};
