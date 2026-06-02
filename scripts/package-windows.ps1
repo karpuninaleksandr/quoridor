@@ -25,8 +25,11 @@ jpackage `
     --input "target\jpackage-input" `
     --main-jar $JarName `
     --arguments "--quoridor.desktop=true" `
-    --dest "dist\windows" `
-    --win-console false
+    --dest "dist\windows"
+
+if (-not (Test-Path "dist\windows\$AppName")) {
+    throw "jpackage did not create dist\windows\$AppName"
+}
 
 Copy-Item "distribution\README.txt" "dist\windows\$AppName\README.txt"
 
