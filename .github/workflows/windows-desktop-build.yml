@@ -1,0 +1,30 @@
+name: Build Windows Desktop App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Build Windows app image
+        shell: pwsh
+        run: .\scripts\package-windows.ps1
+
+      - name: Upload Windows archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quoridor-windows
+          path: dist/windows/Quoridor-windows.zip
+          if-no-files-found: error
