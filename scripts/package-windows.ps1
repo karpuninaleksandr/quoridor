@@ -36,4 +36,4 @@ if (Test-Path $ZipPath) {
 }
 Compress-Archive -Path "dist\windows\$AppName" -DestinationPath $ZipPath
 
-Write-Host "Готово: $ZipPath"
+Write-Host "Done: $ZipPath"
