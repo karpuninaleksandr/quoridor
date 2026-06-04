@@ -175,6 +175,24 @@ F(s)=\sum_i \lambda_i f_i(s)
 \end{block}
 \end{frame}
 
+\begin{frame}{Случайный выбор}
+\begin{block}{}
+\scriptsize
+\begin{tabular}{@{}l@{}}
+\texttt{randomMove(state, difficulty):} \\
+\quad \texttt{moves = legalMoves(state)} \\
+\quad \texttt{if difficulty = EASY:} \\
+\quad\quad \texttt{return random(moves)} \\
+\quad \texttt{scoredMoves = sortByEvaluate(moves, state)} \\
+\quad \texttt{if difficulty = MEDIUM:} \\
+\quad\quad \texttt{candidates = firstHalf(scoredMoves)} \\
+\quad \texttt{else:} \\
+\quad\quad \texttt{candidates = firstThree(scoredMoves)} \\
+\quad \texttt{return random(candidates)}
+\end{tabular}
+\end{block}
+\end{frame}
+
 \begin{frame}{MiniMax}
 \begin{block}{}
 \scriptsize
@@ -364,12 +382,17 @@ MiniMax    & 150 & 84  & 62  & 4 & 56,00\% \\
     \draw[black, thick] plot coordinates {(0,737.6) (2,935.2) (4,1578.5)};
     \draw[green!55!black, thick] plot coordinates {(0,4807.6) (2,4991.9) (4,6576.2)};
     \draw[red, thick] plot coordinates {(0,2274.3) (2,2277.5) (4,2743.9)};
+    \draw[blue, thick] plot coordinates {(0,0.4) (2,0.7) (4,1.0)};
     \foreach \x/\y in {0/737.6,2/935.2,4/1578.5} \fill[black] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/4807.6,2/4991.9,4/6576.2} \fill[green!55!black] (\x,\y) circle (2pt);
     \foreach \x/\y in {0/2274.3,2/2277.5,4/2743.9} \fill[red] (\x,\y) circle (2pt);
+    \foreach \x/\y in {0/0.4,2/0.7,4/1.0} \fill[blue] (\x,\y) circle (2pt);
     \node[anchor=west, font=\small] at (4.35,5400) {MiniMax};
     \node[anchor=west, font=\small] at (4.35,4550) {\textcolor{green!55!black}{MonteCarlo}};
     \node[anchor=west, font=\small] at (4.35,3700) {\textcolor{red}{AlphaBeta}};
+    \node[anchor=west, font=\small] at (4.35,2850) {\textcolor{blue}{Случайный}};
+    \node[anchor=west, font=\scriptsize] at (4.35,2450)
+        {\textcolor{blue}{}};
 \end{tikzpicture}
 \end{figure}
 \end{frame}
